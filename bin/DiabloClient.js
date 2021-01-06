@@ -45,9 +45,11 @@ class Client {
 	 * @param ip
 	 * @param port
 	 */
-	constructor(client, server, ip, port) {
-		[client, server].forEach(_ => _.on.call(_, 'error', _ => this.destory()));
-		if (port !== 4000/*gameserver*/) { // Just combine the 2 and be done with it
+	constructor(client, server, ip, port, destPort=0) {
+		client.on.call(client, 'error', () => client.destroy());
+		server.on.call(server, 'error', () => server.destroy());
+
+		if (destPort !== 4000) { // Just combine the 2 and be done with it
 			client.pipe(server);
 			server.pipe(client);
 			return null;

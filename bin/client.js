@@ -12,6 +12,7 @@ const preferredAuthMethods = [enums.AUTH, enums.NO_AUTH];
 
 const BufferHelper = require('./BufferHelper');
 const net = require('net');
+const { create } = require('domain');
 
 class Client {
 	constructor(socket, settings = {users: [], options: {allowNoAuth: false, listen: 0x50C4, client: require('./ProxyClient')}}) {
@@ -28,7 +29,7 @@ class Client {
 			connectBuffer.writeUInt8(0x00, 1); // Success code
 			this.socket.write(connectBuffer);
 			this.destroy(false); // Dont close socket ;)
-
+			
 			if (this.settings.options.client) {
 				new this.settings.options.client(this.socket, remote, ipAddr, port);
 			} else {
@@ -43,6 +44,8 @@ class Client {
 			Client.instances.splice(Client.instances.indexOf(this), 1);
 		});
 	}
+
+
 
 	handshakeInit(data) {
 		let offset = 0;
@@ -154,6 +157,5 @@ class Client {
 
 
 }
-
 
 module.exports = Client;

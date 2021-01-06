@@ -25,6 +25,8 @@ class GameServer extends require('events') {
 
 					// Add leading zeroes
 					arr = arr.map(byte => ('0' + byte.toString(16)).substr(-2));
+					let readableChars = [];
+					for (let i = 32; i < 128; i++) readableChars.push(i);
 
 					let print = 'server' + '->' + '\r\n', stripped, counter = 0;
 					while (arr.length) {
