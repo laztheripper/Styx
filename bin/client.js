@@ -12,10 +12,11 @@ const preferredAuthMethods = [enums.AUTH, enums.NO_AUTH];
 
 const BufferHelper = require('./BufferHelper');
 const net = require('net');
-const { create } = require('domain');
+//const { create } = require('domain');
+const { Console } = require('console');
 
 class Client {
-	constructor(socket, settings = {users: [], options: {allowNoAuth: false, listen: 0x50C4, client: require('./ProxyClient')}}) {
+	constructor(socket, settings = {users: [], options: {allowNoAuth: false, listen: 0x50C4, client: require('./ProxyClient')}}) { // ProxyClient is just a fallback!!
 		this.socket = socket;
 		this.settings = settings;
 		socket.once('data', data => this.handshakeInit(data));
@@ -24,17 +25,33 @@ class Client {
 	}
 
 	connect(ipAddr, port, connectBuffer) {
-		console.log(ipAddr + ':' + port);
 		const remote = net.connect(port, ipAddr, () => {
 			connectBuffer.writeUInt8(0x00, 1); // Success code
 			this.socket.write(connectBuffer);
 			this.destroy(false); // Dont close socket ;)
 			
-			if (this.settings.options.client) {
-				new this.settings.options.client(this.socket, remote, ipAddr, port);
-			} else {
-				new this.settings.options.client(this.socket, remote);
+			if ([6112,6113,4000].includes(port)) {
+				console.log(ipAddr + ':' + port);
+				new this.settings.options.client(this.socket, remote, ipAddr, port, port);
+				return;
 			}
+
+			this.socket.once('data', data1 => {
+				remote.write(data1);
+				var destPort = 0;
+				var destHost = 'HOST';
+
+				try {[destHost, destPort] = BufferHelper.getString(data1, data1.length, 0).split(' ')[1].split(':')} catch (e) {
+					try {
+						if (data1.readUInt8(0) === 0x05) { // Todo add destHost for socks5 proxychains and test socks5 proxy
+							destPort = data1.readUInt16BE(data1.length-2);
+						}
+					} catch (e) {}
+				}
+
+				console.log(destPort ? destHost + ':' + destPort : ipAddr + ':' + port); // direct : proxychain
+				new this.settings.options.client(this.socket, remote, ipAddr, port, parseInt(destPort));
+			});
 		}).on('error', err => {
 			connectBuffer.writeUInt8(!!err | 0, 1); // Success code
 			this.socket.write(connectBuffer);

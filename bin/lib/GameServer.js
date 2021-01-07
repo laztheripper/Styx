@@ -39,8 +39,8 @@ class GameServer extends require('events') {
 							+ '\r\n';
 						counter += stripped;
 					}
-					console.error('Mallformed packet -> \r\n' + print);
-					require('fs').writeFileSync(__dirname + '\\..\\log\\errors.log', 'Mallformed packet -> \r\n' + print + '\r\n', {flag: 'a'});
+					console.error('Malformed packet -> \r\n' + print);
+					require('fs').writeFileSync(__dirname + '\\..\\log\\errors.log', 'Malformed packet -> \r\n' + print + '\r\n', {flag: 'a'});
 					break;
 				}
 

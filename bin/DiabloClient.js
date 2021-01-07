@@ -38,7 +38,7 @@ const loadPlugin = what => {
 
 addDirectory(__dirname + '\\plugins', 'plugins');
 
-class Client {
+class DiabloClient {
 	/**
 	 * @param {Socket} client
 	 * @param {Socket} server
@@ -54,7 +54,7 @@ class Client {
 			server.pipe(client);
 			return null;
 		}
-		const dataHandler = (from, to, hooks) => buffer => !hooks.map(client => client.call(this, buffer) === Client.BLOCK).some(_ => _) && to.write(buffer);
+		const dataHandler = (from, to, hooks) => buffer => !hooks.map(client => client.call(this, buffer) === DiabloClient.BLOCK).some(_ => _) && to.write(buffer);
 
 		this.hooks = {client: [], server: []};
 		client.on('data', dataHandler(client, server, this.hooks.client));
@@ -68,7 +68,7 @@ class Client {
 		this.server = server;
 		this.initizialed = true;
 
-		Client.instances.push(this);
+		DiabloClient.instances.push(this);
 		this.game = new Game(this);
 	}
 
@@ -77,4 +77,4 @@ class Client {
 }
 
 
-module.exports = Client;
+module.exports = DiabloClient;
