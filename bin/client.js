@@ -41,12 +41,51 @@ class Client {
 				var destPort = 0;
 				var destHost = 'HOST';
 
-				try {[destHost, destPort] = BufferHelper.getString(data1, data1.length, 0).split(' ')[1].split(':')} catch (e) {
-					try {
-						if (data1.readUInt8(0) === 0x05) { // Todo add destHost for socks5 proxychains and test socks5 proxy
-							destPort = data1.readUInt16BE(data1.length-2);
-						}
-					} catch (e) {}
+				try {[destHost, destPort] = BufferHelper.getString(data1, data1.length, 0).split(' ')[1].split(':')} catch (e) {}
+
+				if (data1.length >= 1 && data1.readUInt8(0) === 0x05) { // Todo add destHost for socks5 proxychains and test socks5 proxy
+					this.socket.once('data', data3 => {
+						remote.write(data3);
+
+						this.socket.once('data', data5 => {
+							remote.write(data5);
+
+							if (data5.length >= 10 && data5[0] === 0x05 && data5[2] === 0x00) { // All of this block is just to get dest IP:PORT. lol
+								let offset = 3;
+
+								switch (data5[offset++]) {
+									case 0x01: // ip address
+										destHost = [offset++, offset++, offset++, offset++].map(offset => data5.readUInt8(offset).toString()).join('.');
+										break;
+									case 0x03: // domain name
+										const sizeDomain = data5.readUInt8(offset++);
+										destHost = BufferHelper.getString(data5, sizeDomain, offset);
+										offset += sizeDomain;
+										break;
+									case 0x04: // IPV6
+										ipAddr = [];
+										for (let i = 0; i < 16; i++) ipAddr.push(offset++);
+										destHost = ipAddr.map(offset => data5.readUInt8(offset).toString(16).padStart(2, '0')).reduce((a, c, i) => a + ((i && (i + 1) % 2) ? ':' + c : c), '')
+										break;
+								}
+
+								destPort = data5.readUInt16BE(data5.length-2);
+							}
+
+							console.log(destPort ? destHost + ':' + destPort : ipAddr + ':' + port); // direct : proxychain
+							new this.settings.options.client(this.socket, remote, ipAddr, port, parseInt(destPort));
+						});
+					});
+	
+					remote.once('data', data2 => {
+						this.socket.write(data2);
+	
+						remote.once('data', data4 => {
+							this.socket.write(data4);
+						});
+					});
+
+					return;
 				}
 
 				console.log(destPort ? destHost + ':' + destPort : ipAddr + ':' + port); // direct : proxychain
