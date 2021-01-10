@@ -1,4 +1,4 @@
-const GameServer = require('../lib/GameServer');
+const GameServer = require('./../lib/GameServer');
 
 const readableChars = [];
 for (let i = 32; i < 128; i++) readableChars.push(i);
@@ -18,7 +18,7 @@ GameServer.hooks.push(
 		// Add leading zeroes
 		arr = arr.map(byte => ('0' + byte.toString(16)).substr(-2));
 
-		let print = 'server' + '->' + this.ip + ':' + this.port + '\r\n', stripped, counter = 0;
+		let print = '\r\n', stripped, counter = 0;
 		while (arr.length) {
 			let bytes = arr.splice(0, stripped = arr.length < 16 && arr.length || 16), tmp = [0, 0];
 			print += ('0000' + counter.toString(16)).substr(-4) + '\t';
@@ -35,7 +35,7 @@ GameServer.hooks.push(
 		const fs = require('fs');
 		const logfile = {server: this.diabloProxy.scfile, client: this.diabloProxy.csfile}['server'];
 
-		console.log('Writing to log file ->' + logfile);
+		//console.log('Writing to log file ->' + logfile);
 		// fs.writeFileSync(logfile,buffer,{flag: 'a'});
 	}
 );

@@ -7,6 +7,6 @@ module.exports = {
 	options: {
 		allowNoAuth: true, // If true, allow no auth
 		listen: 0x50C4, // "sock" in hex, or whatever port you prefer
-		client: require('./DiabloClient'),
+		proxy: require('./DiabloProxy'),
 	}
 };

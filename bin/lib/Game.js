@@ -1,4 +1,5 @@
 const GameServer = require('./GameServer');
+const GameClient = require('./GameClient');
 const BaseLevel = require('./BaseLevel');
 const UnitCollector = require('./UnitCollector');
 const ItemCollector = require('./ItemCollector');
@@ -8,6 +9,7 @@ class Game {
 		// ToDo: Hook myself upon the realm server proxy
 		this.diabloProxy = diabloProxy;
 		this.gameServer = new GameServer(this);
+		//this.gameClient = new GameClient(this);
 
 		// Collect units
 		this.unitCollector = new UnitCollector(this);
@@ -18,7 +20,6 @@ class Game {
 		this.me = this.unitCollector.createMe();
 		this.collectData(); // Do this in another function to prevent memory leaks
 		delete this.collectData; // Doesnt need to be called again
-
 	}
 
 	destroy() {

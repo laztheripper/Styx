@@ -7,14 +7,14 @@ REM End -    Trick to run as admin
 
 REM Should need node?
 echo Installing nodejs 13 if needed
-where node.exe >nul 2>&1 && echo + skipping nodejs  || .\installTools\installnodejs.vbs
+where node.exe >nul 2>&1 && echo + skipping nodejs  || .\install\installnodejs.vbs
 
-.\installTools\resetvars.vbs
+.\install\resetvars.vbs
 call "%TEMP%\resetvars.bat"
 
 where yarn >nul 2>&1 && echo + skipping yarn || cmd /c npm install -g yarn
 
-.\installTools\resetvars.vbs
+.\install\resetvars.vbs
 call "%TEMP%\resetvars.bat"
 
 echo Installing windows build tools...

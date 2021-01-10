@@ -1,6 +1,6 @@
 const fs = require('fs');
 const {ItemType, ItemCategory} = require("./Enums");
-const DS1 = require('./mephistools/ds1ManualReader');
+
 
 class BaseItem {
 	constructor() {
@@ -1036,7 +1036,7 @@ class D2Objects {
 	static instances = []
 }
 
-class LvlPrest {
+/*class LvlPrest {
 	constructor(args) {
 		let i = 0;
 		this.Name = args[i++];
@@ -1262,7 +1262,7 @@ class LevelPreset {
 	}
 
 	static instances = [];
-}
+}*/
 
 { // Just a block =)
 	/**
@@ -1289,7 +1289,7 @@ class LevelPreset {
 
 		csvs.forEach(([file, model]) => readCSV(fs.readFileSync(file), models[model]));
 	}
-	{
+	/*{
 		const models = {D2Objects, Levels, LvlPrest};
 		const semicolons = ['D2Objects', 'Levels', 'LvlPrest'].map(x => [__dirname + '\\..\\data\\' + x + '.semicolon', x]);
 
@@ -1303,15 +1303,15 @@ class LevelPreset {
 					return toInt;
 				})).forEach(line => new model(line));
 		})(fs.readFileSync(file), models[model]));
-	}
+	}*/
 
 
 	module.exports.BaseItem = BaseItem;
 	module.exports.BaseItemType = BaseItemType;
 	module.exports.BaseStat = BaseStat;
 	module.exports.BaseUniqueItem = BaseUniqueItem;
-	module.exports.D2Objects = D2Objects;
-	module.exports.LvlPrest = LvlPrest;
+	//module.exports.D2Objects = D2Objects;
+	//module.exports.LvlPrest = LvlPrest;
 	// console.log('Loading lvl presets...');
 	// LvlPrest.instances.forEach((key, index) => new LevelPreset(index))
 }

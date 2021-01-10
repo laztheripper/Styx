@@ -1,5 +1,6 @@
 const BitReader = require('./BitReader');
 const ItemReader = require('./ItemReader');
+const {logPacket} = require('./Util');
 
 class GameServer extends require('events') {
 	/**
@@ -8,39 +9,42 @@ class GameServer extends require('events') {
 	constructor(game) {
 		super();
 		this.game = game;
+		this.lastBuff = false;
 		this.game.diabloProxy.hooks.server.push(buffer => {
 			let offset = 0;
+
+			if (this.lastBuff) {
+				buffer = Buffer.concat([this.lastBuff, buffer], this.lastBuff.length + buffer.length);
+				this.lastBuff = false;
+			}
+
+			logPacket('Server->Client', buffer);
 
 			while (offset < buffer.length) {
 				const checkBuffer = Buffer.alloc(Math.min(buffer.length - offset, 255));
 				for (let i = 0; i < Math.min(buffer.length - offset, 255); i++) checkBuffer.writeUInt8(buffer.readUInt8(i + offset), i);
 
 				const size = GameServer.getPacketSize(checkBuffer, buffer.length - offset);
-				if (size === -1 || buffer.length - offset - size < 0) {
-					// Buffer to readable log
-					const checkBuffer = Buffer.alloc(buffer.length - offset);
-					for (let i = 0; i < buffer.length - offset; i++) checkBuffer.writeUInt8(buffer.readUInt8(i + offset), i);
-					let arr = [];
-					for (let i = 0; i < checkBuffer.length; i++) arr.push(checkBuffer.readUInt8(i));
+				
+				if (size === -1) {
+					logPacket('Malformed packet: Server->Client', buffer);
+					break;
+				}
 
-					// Add leading zeroes
-					arr = arr.map(byte => ('0' + byte.toString(16)).substr(-2));
-					let readableChars = [];
-					for (let i = 32; i < 128; i++) readableChars.push(i);
+				if (buffer.length - offset - size < 0) {
+					if (buffer.length - offset > 0) { // Packet is truncated, append the truncated part to the next packet that arrives..
+						let tmp = Buffer.alloc(buffer.length - offset);
 
-					let print = 'server' + '->' + '\r\n', stripped, counter = 0;
-					while (arr.length) {
-						let bytes = arr.splice(0, stripped = arr.length < 16 && arr.length || 16), tmp = [0, 0];
-						print += ('0000' + counter.toString(16)).substr(-4) + '\t';
-						let tmpprint = [0, 0].map((x, i) => (tmp[i] = bytes.splice(0, 8)).join(' ')).join('    ');
-						print += (tmpprint + ' '.repeat(50)).substr(0, 50)
-							+ '     '
-							+ (tmp.map(arr => arr.map(x => parseInt(x, 16)).map(x => readableChars.includes(x) && String.fromCharCode(x) || '.').join('')).join('    '))
-							+ '\r\n';
-						counter += stripped;
+						for (let i = 0; i < buffer.length - offset; i++) {
+							tmp.writeUInt8(buffer.readUInt8(i + offset), i);
+						}
+
+						this.lastBuff = tmp;
+						//logPacket('End of buffer', tmp);
+					} else {
+						logPacket('Malformed packet: Server->Client', buffer);
 					}
-					console.error('Malformed packet -> \r\n' + print);
-					require('fs').writeFileSync(__dirname + '\\..\\log\\errors.log', 'Malformed packet -> \r\n' + print + '\r\n', {flag: 'a'});
+
 					break;
 				}
 
@@ -57,7 +61,7 @@ class GameServer extends require('events') {
 					case 0x9C:
 					case 0x9D:
 						try {
-							packetData = new ItemReader(packetBuffer, game);
+							//packetData = new ItemReader(packetBuffer, game);
 						} catch(e){
 							console.log('Failed to parse packet ',e);
 							continue; // Failed to parse packet
@@ -78,7 +82,189 @@ class GameServer extends require('events') {
 		})
 	}
 
-	static serverPacketSizes = [1, /* 1*/ 8,  /* 2*/ 1,  /*3*/ 12,  /* 4*/ 1,  /* 5*/ 1,  /* 6*/ 1, /* 7*/ 6, /* 8*/ 6, /* 9*/ 11, /* 10*/ 6, /* 11*/ 6, /* 12*/ 9,  /* 13*/ 13, /*14*/ 12, /* 15*/ 16, /* 16*/ 16, /* 17*/ 8, /* 18*/ 26, /* 19*/ 14, 18, 11, -1, -1, 15, 2, 2, 3, 5, 3, 4, 6, 10, 12, 12, 13, 90, 90, -1, 40, 103, 97, 15, -1, 8, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 34, 8, 13, -1, 6, -1, -1, 13, -1, 11, 11, -1, -1, -1, 16, 17, 7, 1, 15, 14, 42, 10, 3, -1, -1, 14, 7, 26, 40, -1, 5, 6, 38, 5, 7, 2, 7, 21, -1, 7, 7, 16, 21, 12, 12, 16, 16, 10, 1, 1, 1, 1, 1, 32, 10, 13, 6, 2, 21, 6, 13, 8, 6, 18, 5, 10, 4, 20, 29, -1, -1, -1, -1, -1, -1, 2, 6, 6, 11, 7, 10, 33, 13, 26, 6, 8, -1, 13, 9, 1, 7, 16, 17, 7, -1, -1, 7, 8, 10, 7, 8, 24, 3, 8, -1, 7, -1, 7, -1, 7, -1, -1, -1, 2, 1];
+	static serverPacketSizes = [
+		1,	// 0x0
+		8,	// 0x1
+		1,	// 0x2
+		12,	// 0x3
+		1,	// 0x4
+		1,	// 0x5
+		1,	// 0x6
+		6,	// 0x7
+		6,	// 0x8
+		11,	// 0x9
+		6,	// 0xA
+		6,	// 0xB
+		9,	// 0xC
+		13,	// 0xD
+		12,	// 0xE
+		16,	// 0xF
+		16,	// 0x10
+		8,	// 0x11
+		26,	// 0x12
+		14,	// 0x13
+		18,	// 0x14
+		11,	// 0x15
+		-1,	// 0x16
+		12,	// 0x17
+		15,	// 0x18
+		2,	// 0x19
+		2,	// 0x1A
+		3,	// 0x1B
+		5,	// 0x1C
+		3,	// 0x1D
+		4,	// 0x1E
+		6,	// 0x1F
+		10,	// 0x20
+		12,	// 0x21
+		12,	// 0x22
+		13,	// 0x23
+		90,	// 0x24
+		90,	// 0x25
+		-1,	// 0x26
+		40,	// 0x27
+		103,// 0x28
+		97,	// 0x29
+		15,	// 0x2A
+		-1,	// 0x2B
+		8,	// 0x2C
+		-1,	// 0x2D
+		-1,	// 0x2E
+		-1,	// 0x2F
+		-1,	// 0x30
+		-1,	// 0x31
+		-1,	// 0x32
+		-1,	// 0x33
+		-1,	// 0x34
+		-1,	// 0x35
+		-1,	// 0x36
+		-1,	// 0x37
+		-1,	// 0x38
+		-1,	// 0x39
+		-1,	// 0x3A
+		-1,	// 0x3B
+		-1,	// 0x3C
+		-1,	// 0x3D
+		34,	// 0x3E
+		8,	// 0x3F
+		13,	// 0x40
+		-1,	// 0x41
+		6,	// 0x42
+		-1,	// 0x43
+		-1,	// 0x44
+		13,	// 0x45
+		-1,	// 0x46
+		11,	// 0x47
+		11,	// 0x48
+		-1,	// 0x49
+		-1,	// 0x4A
+		-1,	// 0x4B
+		16,	// 0x4C
+		17,	// 0x4D
+		7,	// 0x4E
+		1,	// 0x4F
+		15,	// 0x50
+		14,	// 0x51
+		42,	// 0x52
+		10,	// 0x53
+		3,	// 0x54
+		-1,	// 0x55
+		-1,	// 0x56
+		14,	// 0x57
+		7,	// 0x58
+		26,	// 0x59
+		40,	// 0x5A
+		-1,	// 0x5B
+		5,	// 0x5C
+		6,	// 0x5D
+		38,	// 0x5E
+		5,	// 0x5F
+		7,	// 0x60
+		2,	// 0x61
+		7,	// 0x62
+		21,	// 0x63
+		-1,	// 0x64
+		7,	// 0x65
+		7,	// 0x66
+		16,	// 0x67
+		21,	// 0x68
+		12,	// 0x69
+		12,	// 0x6A
+		16,	// 0x6B
+		16,	// 0x6C
+		10,	// 0x6D
+		1,	// 0x6E
+		1,	// 0x6F
+		1,	// 0x70
+		1,	// 0x71
+		1,	// 0x72
+		32,	// 0x73
+		10,	// 0x74
+		13,	// 0x75
+		6,	// 0x76
+		2,	// 0x77
+		21,	// 0x78
+		6,	// 0x79
+		13,	// 0x7A
+		8,	// 0x7B
+		6,	// 0x7C
+		18,	// 0x7D
+		5,	// 0x7E
+		10,	// 0x7F
+		4,	// 0x80
+		20,	// 0x81
+		29,	// 0x82
+		-1,	// 0x83
+		-1,	// 0x84
+		-1,	// 0x85
+		-1,	// 0x86
+		-1,	// 0x87
+		-1,	// 0x88
+		2,	// 0x89
+		6,	// 0x8A
+		6,	// 0x8B
+		11,	// 0x8C
+		7,	// 0x8D
+		10,	// 0x8E
+		33,	// 0x8F
+		13,	// 0x90
+		26,	// 0x91
+		6,	// 0x92
+		8,	// 0x93
+		-1,	// 0x94
+		13,	// 0x95
+		9,	// 0x96
+		1,	// 0x97
+		7,	// 0x98
+		16,	// 0x99
+		17,	// 0x9A
+		7,	// 0x9B
+		-1,	// 0x9C
+		-1,	// 0x9D
+		7,	// 0x9E
+		8,	// 0x9F
+		10,	// 0xA0
+		7,	// 0xA1
+		8,	// 0xA2
+		24,	// 0xA3
+		3,	// 0xA4
+		8,	// 0xA5
+		-1,	// 0xA6
+		7,	// 0xA7
+		-1,	// 0xA8
+		7,	// 0xA9
+		-1,	// 0xAA
+		7,	// 0xAB
+		-1,	// 0xAC
+		-1,	// 0xAD
+		-1,	// 0xAE
+		2,	// 0xAF
+		1,	// 0xB0
+		-1, // 0xB1
+		53, // 0xB2
+		-1,	// 0xB3
+		5	// 0xB4
+	];
 
 	/**
 	 * @param {Buffer} bytes
@@ -88,12 +274,12 @@ class GameServer extends require('events') {
 	 */
 	static getPacketSize(bytes, size, offset = 0) {
 		const packetId = bytes[0];
-		const inHex = packetId.toString(16);
+		//const inHex = packetId.toString(16);
 		switch (packetId) {
 			case 0x26: // Chat msg
 				return GameServer.getChatPacketSize(bytes, size);
 
-			case 0x5b: // Player in game
+			case 0x5B: // Player in game
 				return bytes.readUInt16LE(offset + 1);
 
 			case 0x94:
@@ -102,42 +288,40 @@ class GameServer extends require('events') {
 				}
 				break;
 
-			case 0xa8: // Set state
+			case 0xA8: // Set state
 				if (size >= 7) {
 					return bytes[6];
 				}
 				break;
 
-			case 0xaa: // Add unit
+			case 0xAA: // Add unit
 				if (size >= 7) {
 					return bytes[6];
 				}
 				break;
 
-			case 0xac: // Assign NPC
+			case 0xAC: // Assign NPC
 				if (size >= 13) {
 					return bytes[12];
 				}
 				break;
 
-			case 0xae: // Warden request
+			case 0xAE: // Warden request
 				if (size >= 3) {
 					return bytes.readUInt16LE(offset + 1) + 1;
 				}
 				break;
-			case 0x3e: // 62 Item change
+			case 0x3E: // 62 Item change
 				return bytes[offset + 1];
 
-			case 0x9c: // Item (in the world)
-			case 0x9d: // Item (from unit)
+			case 0x9C: // Item (in the world)
+			case 0x9D: // Item (from unit)
 				if (size >= 3) {
 					return bytes[offset + 2];
 				}
 				break;
 			case 0xBA: // Unknown
 				return 1; // Best estimation so far
-			case 0x17:
-				return 12;
 			case 0xFF:
 				return 12;
 			default:
@@ -149,15 +333,11 @@ class GameServer extends require('events') {
 		return -1;
 	};
 
-	/**
-	 *
-	 * @param {Buffer} data
-	 * @param {number} size
-	 */
 	static getChatPacketSize(data, size) {
-		if (size >= 12) {
-			return 1; //ToDo; obv fill in correctly
-		}
+		// 0x26 [BYTE ChatType] [BYTE LocaleId] [BYTE UnitType] [DWORD UnitGid] [BYTE ChatColor] [BYTE ChatSubType] [NULLSTRING Nick] [NULLSTRING Message]
+		console.log(data);
+		console.log(size);
+
 		return -1;
 	}
 
@@ -166,7 +346,9 @@ class GameServer extends require('events') {
 }
 
 module.exports = GameServer;
+
 const BYTE = 'byte', WORD = 'word', DWORD = 'dword', NULLSTRING = 'string';
+
 let structs = [
 	{id: 0x00,},
 	{id: 0x01, Difficulty: BYTE, Unknown: WORD, Hardcore: WORD, Expansion: BYTE, Ladder: BYTE,},

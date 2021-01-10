@@ -10,7 +10,6 @@ class UnitCollector extends require('events') {
 		delete this.collectData;
 	}
 
-
 	collectData() {
 		const fetchUnit = callback =>
 			({packetData}) =>

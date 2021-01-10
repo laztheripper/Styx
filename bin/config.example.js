@@ -2,7 +2,6 @@
  * @description Config file to be written
  */
 
-
 module.exports = {
 	users: [
 		{
@@ -13,6 +12,6 @@ module.exports = {
 	options: {
 		allowNoAuth: false, // If true, allow no auth
 		listen: 0x50C4, // "sock" in hex, or whatever port you prefer
-		client: require('./ProxyClient'), // ProxyClient is the default
+		client: require('./SimpleProxy'), // SimpleClient is the default
 	}
 };

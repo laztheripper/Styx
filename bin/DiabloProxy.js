@@ -38,23 +38,25 @@ const loadPlugin = what => {
 
 addDirectory(__dirname + '\\plugins', 'plugins');
 
-class DiabloClient {
+class DiabloProxy {
 	/**
 	 * @param {Socket} client
 	 * @param {Socket} server
 	 * @param ip
 	 * @param port
 	 */
-	constructor(client, server, ip, port, destPort=0) {
+	constructor(client, server, ip, port) {
+		this.proxyType = 'Diablo';
+		
 		client.on.call(client, 'error', () => client.destroy());
 		server.on.call(server, 'error', () => server.destroy());
 
-		if (destPort !== 4000) { // Just combine the 2 and be done with it
+		if (port !== 4000) { // Just combine the 2 and be done with it
 			client.pipe(server);
 			server.pipe(client);
 			return null;
 		}
-		const dataHandler = (from, to, hooks) => buffer => !hooks.map(client => client.call(this, buffer) === DiabloClient.BLOCK).some(_ => _) && to.write(buffer);
+		const dataHandler = (from, to, hooks) => buffer => !hooks.map(client => client.call(this, buffer) === DiabloProxy.BLOCK).some(_ => _) && to.write(buffer);
 
 		this.hooks = {client: [], server: []};
 		client.on('data', dataHandler(client, server, this.hooks.client));
@@ -67,14 +69,13 @@ class DiabloClient {
 		this.client = client;
 		this.server = server;
 		this.initizialed = true;
-
-		DiabloClient.instances.push(this);
 		this.game = new Game(this);
+
+		DiabloProxy.instances.push(this);
 	}
 
 	static instances = [];
 	static BLOCK = Symbol('block');
 }
 
-
-module.exports = DiabloClient;
+module.exports = DiabloProxy;

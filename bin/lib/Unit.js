@@ -12,5 +12,4 @@ class Unit extends require('events') {
 	}
 }
 
-
 module.exports = Unit;
