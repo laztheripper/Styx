@@ -11,8 +11,6 @@ class GameServer extends require('events') {
 		this.game = game;
 		this.lastBuff = false;
 		this.game.diabloProxy.hooks.server.push(buffer => {
-			let offset = 0;
-
 			if (this.lastBuff) {
 				buffer = Buffer.concat([this.lastBuff, buffer], this.lastBuff.length + buffer.length);
 				this.lastBuff = false;
@@ -20,27 +18,17 @@ class GameServer extends require('events') {
 
 			logPacket('Server->Client', buffer);
 
-			while (offset < buffer.length) {
-				const checkBuffer = Buffer.alloc(Math.min(buffer.length - offset, 255));
-				for (let i = 0; i < Math.min(buffer.length - offset, 255); i++) checkBuffer.writeUInt8(buffer.readUInt8(i + offset), i);
-
-				const size = GameServer.getPacketSize(checkBuffer, buffer.length - offset);
+			while (buffer.length) {
+				const size = GameServer.getPacketSize(buffer, buffer.length);
 				
 				if (size === -1) {
 					logPacket('Malformed packet: Server->Client', buffer);
 					break;
 				}
 
-				if (buffer.length - offset - size < 0) {
-					if (buffer.length - offset > 0) { // Packet is truncated, append the truncated part to the next packet that arrives..
-						let tmp = Buffer.alloc(buffer.length - offset);
-
-						for (let i = 0; i < buffer.length - offset; i++) {
-							tmp.writeUInt8(buffer.readUInt8(i + offset), i);
-						}
-
-						this.lastBuff = tmp;
-						//logPacket('End of buffer', tmp);
+				if (buffer.length - size < 0) {
+					if (buffer.length > 0) { // Packet is truncated, append the truncated part to the next packet that arrives..
+						this.lastBuff = buffer;
 					} else {
 						logPacket('Malformed packet: Server->Client', buffer);
 					}
@@ -49,8 +37,8 @@ class GameServer extends require('events') {
 				}
 
 				const packetBuffer = Buffer.alloc(size);
-				for (let i = 0; i < size; i++) packetBuffer.writeUInt8(buffer.readUInt8(i + offset), i);
-				offset += size;
+				buffer.copy(packetBuffer, 0);
+				buffer = buffer.slice(size, buffer.length);
 
 				let packetData;
 				switch (packetBuffer[0]) { // In case it is something special
@@ -64,7 +52,7 @@ class GameServer extends require('events') {
 							//packetData = new ItemReader(packetBuffer, game);
 						} catch(e){
 							console.log('Failed to parse packet ',e);
-							continue; // Failed to parse packet
+							continue;
 						}
 						break;
 					default:
@@ -334,11 +322,11 @@ class GameServer extends require('events') {
 	};
 
 	static getChatPacketSize(data, size) {
-		// 0x26 [BYTE ChatType] [BYTE LocaleId] [BYTE UnitType] [DWORD UnitGid] [BYTE ChatColor] [BYTE ChatSubType] [NULLSTRING Nick] [NULLSTRING Message]
-		console.log(data);
-		console.log(size);
-
-		return -1;
+		let offset = 9;
+		while (size - ++offset > 0) if (data.readUInt8(offset) === 0x00) break;
+		while (size - ++offset > 0) if (data.readUInt8(offset) === 0x00)
+			return offset + 1;
+		return 9999; // Packet is truncated
 	}
 
 	static hooks = [];
