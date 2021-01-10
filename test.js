@@ -33,3 +33,11 @@ const penis = new Penis(eventEmitter);
 eventEmitter.emit('make');
 eventEmitter.emit('scream');
 eventEmitter.emit('scream');
+
+const BufferHelper = require('./bin/lib/BufferHelper');
+
+var buf = Buffer.from([0x70, 0x70, 0x70, 0x70, 0x70, 0x00, 0x00, 0x00, 0x00, 0x00]);
+
+var s = BufferHelper.getString(buf, buf.length, 0);
+
+console.log(s);

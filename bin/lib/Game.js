@@ -3,6 +3,7 @@ const GameClient = require('./GameClient');
 const BaseLevel = require('./BaseLevel');
 const UnitCollector = require('./UnitCollector');
 const ItemCollector = require('./ItemCollector');
+const BufferHelper = require('./BufferHelper');
 
 class Game {
 	constructor(diabloProxy) {
@@ -30,15 +31,25 @@ class Game {
 	collectData() {
 		this.gameServer.once(0x01, ({packetData}) => {
 			this.diff = packetData.Difficulty;
-			this.hardcore = packetData.Hardcore !== 16;
+			this.hardcore = !!(packetData.ArenaFlags & 0x00000800);
 			this.expansion = !!packetData.Expansion;
 			this.ladder = !!packetData.Ladder;
+			console.log('Diff: ' + this.diff);
+			console.log('Hardcore: ' + this.hardcore);
+			console.log('Expansion: ' + this.expansion);
+			console.log('Ladder: ' + this.ladder);
 		});
-		this.gameServer.once(0x03, ({packetData}) => {
+		this.gameServer.once(0x5A, ({packetData}) => {
+			this.account = BufferHelper.getString(packetData.raw, 16, 8);
+			this.charname = BufferHelper.getString(packetData.raw, 16, 24);
+			console.log('Account: ' + this.account);
+			console.log('Character: ' + this.charname);
+		});
+		/*this.gameServer.once(0x03, ({packetData}) => {
 			this.mapid = packetData.Map_ID;
 			this.area = packetData.Area_Id;
 			this.act = packetData.Act;
-		});
+		});*/
 
 		// Upon game termination
 		this.gameServer.once(0xB0, _ => this.destroy());

@@ -16,17 +16,12 @@ class GameServer extends require('events') {
 				this.lastBuff = false;
 			}
 
-			logPacket('Server->Client', buffer);
+			//logPacket('Server->Client', buffer);
 
 			while (buffer.length) {
 				const size = GameServer.getPacketSize(buffer, buffer.length);
-				
-				if (size === -1) {
-					logPacket('Malformed packet: Server->Client', buffer);
-					break;
-				}
 
-				if (buffer.length - size < 0) {
+				if (size === -1 || buffer.length - size < 0) {
 					if (buffer.length > 0) { // Packet is truncated, append the truncated part to the next packet that arrives..
 						this.lastBuff = buffer;
 					} else {
@@ -62,6 +57,7 @@ class GameServer extends require('events') {
 						packetData.raw = packetBuffer;
 						packetData.packetIdHex = packetData.PacketId.toString(16);
 				}
+				
 				this.emit(null, {packetData, game});
 				this.emit(packetBuffer[0], {packetData, game});
 				GameServer.hooks.forEach(hook => typeof hook === 'function' && hook.apply(this.game, [{raw: packetBuffer, ...packetData}]));
@@ -326,7 +322,7 @@ class GameServer extends require('events') {
 		while (size - ++offset > 0) if (data.readUInt8(offset) === 0x00) break;
 		while (size - ++offset > 0) if (data.readUInt8(offset) === 0x00)
 			return offset + 1;
-		return 9999; // Packet is truncated
+		return -1; // Packet is truncated
 	}
 
 	static hooks = [];
@@ -339,7 +335,7 @@ const BYTE = 'byte', WORD = 'word', DWORD = 'dword', NULLSTRING = 'string';
 
 let structs = [
 	{id: 0x00,},
-	{id: 0x01, Difficulty: BYTE, Unknown: WORD, Hardcore: WORD, Expansion: BYTE, Ladder: BYTE,},
+	{id: 0x01, Difficulty: BYTE, ArenaFlags: DWORD, Expansion: BYTE, Ladder: BYTE,},
 	{id: 0x02,},
 	{id: 0x03, Act: BYTE, Map_ID: DWORD, Area_Id: WORD, Unknown: DWORD,},
 	{id: 0x04,},
@@ -616,7 +612,7 @@ let structs = [
 	//ToDo; deal with states
 	//{id: 0xAA, UnitType: BYTE, UnitId: DWORD, PacketLength: BYTE, [VOID State Info]},
 	{id: 0xAB, UnitType: BYTE, UnitId: DWORD, UnitLife: BYTE,},
-	//{id: 0xAC, UnitId: DWORD, UnitCode: WORD,X: WORD,Y: WORD, UnitLife: BYTE, PacketLength: BYTE, [VOID State Info]},
+	//{id: 0xAC, UnitId: DWORD, UnitCode: WORD, X: WORD, Y: WORD, UnitLife: BYTE, PacketLength: BYTE, [VOID State Info]},
 	//{id: 0xAE, LengthNoHeader: WORD, [VOID Data]},
 	{id: 0xAF, Compression: BYTE,},
 	{id: 0xB0,},
