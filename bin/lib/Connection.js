@@ -16,8 +16,8 @@ class Connection {
 	constructor(socket, settings = {users: [], options: {allowNoAuth: false, listen: 0x50C4, proxy: require('./../SimpleProxy')}}) {
 		this.socket = socket;
 		this.settings = settings;
-		socket.once('data', data => this.handshakeInit(data));
 		socket.on('error', e => e);
+		socket.once('data', data => this.handshakeInit(data));
 		Connection.instances.push(this);
 	}
 

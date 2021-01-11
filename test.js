@@ -30,14 +30,28 @@ class Penis {
 
 const penis = new Penis(eventEmitter);
 
-eventEmitter.emit('make');
-eventEmitter.emit('scream');
-eventEmitter.emit('scream');
+//eventEmitter.emit('make');
+//eventEmitter.emit('scream');
+//eventEmitter.emit('scream');
 
 const BufferHelper = require('./bin/lib/BufferHelper');
 
-var buf = Buffer.from([0x70, 0x70, 0x70, 0x70, 0x70, 0x00, 0x00, 0x00, 0x00, 0x00]);
 
-var s = BufferHelper.getString(buf, buf.length, 0);
+function stuff() {
+    var buf1 = Buffer.from([0x70, 0x70, 0x70, 0x70, 0x70, 0x00, 0x00, 0x00, 0x00, 0x01]);
+    var buf2 = Buffer.from([0x66, 0x66]);
+    var size = 2;
 
-console.log(s);
+}
+
+var start = Date.now();
+for (let i = 0; i < 1; i++) stuff();
+console.log(Date.now() - start);
+
+function popo() {
+    popo.on('error', () => console.log('wwd'));
+
+    throw new Error('popo');
+}
+
+popo.call(this, 'penis').on('error', () => console.log('wdw'));

@@ -3,16 +3,18 @@ const ItemReader = require('./ItemReader');
 const {logPacket} = require('./Util');
 
 class GameServer extends require('events') {
-	/**
-	 * @param {Game} game
-	 */
 	constructor(game) {
 		super();
 		this.game = game;
 		this.lastBuff = false;
 		this.game.diabloProxy.hooks.server.push(buffer => {
 			if (this.lastBuff) {
-				buffer = Buffer.concat([this.lastBuff, buffer], this.lastBuff.length + buffer.length);
+				if (this.lastBuff.length > 1260) {
+					logPacket('Malformed packet stream: Server->Client', this.lastBuff);
+				} else {
+					buffer = Buffer.concat([this.lastBuff, buffer], this.lastBuff.length + buffer.length);
+				}
+
 				this.lastBuff = false;
 			}
 
@@ -31,12 +33,16 @@ class GameServer extends require('events') {
 					break;
 				}
 
-				const packetBuffer = Buffer.alloc(size);
-				buffer.copy(packetBuffer, 0);
-				buffer = buffer.slice(size, buffer.length);
+				//const packetBuffer = Buffer.alloc(size);
+				//buffer.copy(packetBuffer, 0);
+				const packetBuffer = buffer.slice(0, size);
+				buffer = buffer.slice(size, buffer.length); // Twice as fast
+				//const tmpBuffer = Buffer.alloc(buffer.length - size);
+				//buffer.copy(tmpBuffer, 0, size);
+				//buffer = tmpBuffer;
 
 				let packetData;
-				switch (packetBuffer[0]) { // In case it is something special
+				/*switch (packetBuffer[0]) { // In case it is something special
 					case 0xAC: //Assign NPC / new monster
 						this.game.unitCollector.fromPacket(packetBuffer);
 						break;
@@ -56,14 +62,19 @@ class GameServer extends require('events') {
 						packetData = packetData && packetData.hasOwnProperty('fromBuffer') ? packetData.fromBuffer(packetBuffer) : {PacketId: packetBuffer[0]};
 						packetData.raw = packetBuffer;
 						packetData.packetIdHex = packetData.PacketId.toString(16);
-				}
-				
+				}*/
+
+				packetData = GameServer.packetMap[packetBuffer[0]];
+				packetData = packetData && packetData.hasOwnProperty('fromBuffer') ? packetData.fromBuffer(packetBuffer) : {PacketId: packetBuffer[0]};
+				packetData.raw = packetBuffer;
+				packetData.packetIdHex = packetData.PacketId.toString(16);
+
 				this.emit(null, {packetData, game});
 				this.emit(packetBuffer[0], {packetData, game});
 				GameServer.hooks.forEach(hook => typeof hook === 'function' && hook.apply(this.game, [{raw: packetBuffer, ...packetData}]));
 				if (packetBuffer[0] === 0xB0) break;
 			}
-		})
+		});
 	}
 
 	static serverPacketSizes = [
@@ -258,72 +269,61 @@ class GameServer extends require('events') {
 	 */
 	static getPacketSize(bytes, size, offset = 0) {
 		const packetId = bytes[0];
-		//const inHex = packetId.toString(16);
+
 		switch (packetId) {
 			case 0x26: // Chat msg
-				return GameServer.getChatPacketSize(bytes, size);
+				offset = 9;
+				while (size - ++offset > 0) if (bytes.readUInt8(offset) === 0x00) break;
+				while (size - ++offset > 0) if (bytes.readUInt8(offset) === 0x00)
+					return offset + 1;
+				break;
 
 			case 0x5B: // Player in game
-				return bytes.readUInt16LE(offset + 1);
+				if (size >= 3) return bytes.readUInt16LE(offset + 1);
+				break;
 
 			case 0x94:
-				if (size >= 2) {
-					return bytes[1] * 3 + 6;
-				}
+				if (size >= 2) return bytes[1] * 3 + 6;
 				break;
 
 			case 0xA8: // Set state
-				if (size >= 7) {
-					return bytes[6];
-				}
+				if (size >= 7) return bytes[6];
 				break;
 
 			case 0xAA: // Add unit
-				if (size >= 7) {
-					return bytes[6];
-				}
+				if (size >= 7) return bytes[6];
 				break;
 
 			case 0xAC: // Assign NPC
-				if (size >= 13) {
-					return bytes[12];
-				}
+				if (size >= 13) return bytes[12];
 				break;
 
 			case 0xAE: // Warden request
-				if (size >= 3) {
-					return bytes.readUInt16LE(offset + 1) + 1;
-				}
+				if (size >= 3) return bytes.readUInt16LE(offset + 1) + 1;
 				break;
+
 			case 0x3E: // 62 Item change
-				return bytes[offset + 1];
+				if (size >= 2) return bytes[offset + 1];
+				break;
 
 			case 0x9C: // Item (in the world)
 			case 0x9D: // Item (from unit)
-				if (size >= 3) {
-					return bytes[offset + 2];
-				}
+				if (size >= 3) return bytes[offset + 2];
 				break;
+
 			case 0xBA: // Unknown
 				return 1; // Best estimation so far
 			case 0xFF:
 				return 12;
+			
 			default:
-				if (packetId < GameServer.serverPacketSizes.length) {
+				if (packetId < GameServer.serverPacketSizes.length)
 					return GameServer.serverPacketSizes[packetId];
-				}
 				break;
 		}
+
 		return -1;
 	};
-
-	static getChatPacketSize(data, size) {
-		let offset = 9;
-		while (size - ++offset > 0) if (data.readUInt8(offset) === 0x00) break;
-		while (size - ++offset > 0) if (data.readUInt8(offset) === 0x00)
-			return offset + 1;
-		return -1; // Packet is truncated
-	}
 
 	static hooks = [];
 	static packetMap = {}; // Filled in below
@@ -349,38 +349,13 @@ let structs = [
 	{id: 0x0C, UnitType: BYTE, UnitId: DWORD, AnimationId: WORD, Life: BYTE,},
 	{id: 0x0D, UnitType: BYTE, UnitId: DWORD, Unknown: BYTE, UnitX: WORD, UnitY: WORD, Unknown2: BYTE, Life: BYTE,},
 	{id: 0x0E, UnitType: BYTE, UnitGUID: DWORD, PortalFlags: BYTE, FlagIsTargetable: BYTE, UnitState: DWORD,},
-	{
-		id: 0x0F,
-		UnitType: BYTE,
-		UnitId: DWORD,  /*0x01 = Walk || 0x23 = Run || 0x20 = Knockback*/
-		WalkType: BYTE,
-		TargetX: WORD,
-		TargetY: WORD,
-		null: BYTE,
-		CurrentX: WORD,
-		CurrentY: WORD,
-	},
-	{
-		id: 0x10,
-		UnitType: BYTE,
-		UnitId: DWORD,  /*0x02 = Walk || 0x24 = Run*/
-		WalkType: BYTE,
-		TargetType: BYTE,
-		TargetId: DWORD,
-		CurrentX: WORD,
-		CurrentY: WORD,
-	},
+	{id: 0x0F, UnitType: BYTE, UnitId: DWORD,/*0x01 = Walk || 0x23 = Run || 0x20 = Knockback*/WalkType: BYTE, TargetX: WORD, TargetY: WORD, null: BYTE, CurrentX: WORD, CurrentY: WORD,},
+	{id: 0x10, UnitType: BYTE, UnitId: DWORD,/*0x02 = Walk || 0x24 = Run*/WalkType: BYTE, TargetType: BYTE, TargetId: DWORD, CurrentX: WORD, CurrentY: WORD,},
 	{id: 0x11, UnitType: BYTE, UnitId: DWORD, Unknown: WORD,},
 	{id: 0x15, UnitType: BYTE, UnitId: DWORD, X: WORD, Y: WORD, /*0x01 = True || 0x00 = False*/bool: BYTE,},
-
-	// Need to come up with something special
 	//{id: 0x16, Unknown: BYTE, Unknown: BYTE, Count: BYTE, ARRAY[Count] (UnitType: BYTE, UnitGid: DWORD,X: WORD,Y: WORD,)},
-
 	{id: 0x17, UnitType: BYTE, UnitGid: DWORD, bUnknown0: BYTE, bUnknown1: BYTE, wUnknown2: WORD, wUnknown3: WORD,},
-
-	// Need to come up with something special
 	//{id: 0x18, [BITS[15] HP] [BITS[15] MP] [BITS[15] Stamina] [BITS[7] HPRegen] [BITS[7] MPRegen] [BITS[16] x] [BITS[16] y] [BITS[8] Vx] [ BITS[8] Vy]},
-
 	{id: 0x19, Amount: BYTE,},
 	{id: 0x1A, Amount: BYTE,},
 	{id: 0x1B, Amount: WORD,},
@@ -392,27 +367,12 @@ let structs = [
 	{id: 0x21, Unknown: WORD, UnitId: DWORD, Skill: WORD, BaseLevel: BYTE, BonusAmount: BYTE, Unknown2: BYTE,},
 	{id: 0x22, Unknown/*(UnitType?)*/: WORD, UnitId: DWORD, Skill: WORD, Amount: BYTE, Unknown2: WORD,},
 	{id: 0x23, UnitType: BYTE, UnitGid: DWORD, Hand/*(R=0, L =1)*/: BYTE, Skill: WORD, ItemGid: DWORD,},
-
-
-	{
-		id: 0x26,
-		ChatType: BYTE,
-		LocaleId: BYTE,
-		UnitType: BYTE,
-		UnitGid: DWORD,
-		ChatColor: BYTE,
-		ChatSubType: BYTE,
-		Nick: NULLSTRING,
-		Message: NULLSTRING,
-	},
-	// ToDo; make something for arrays
+	{id: 0x26, ChatType: BYTE, LocaleId: BYTE, UnitType: BYTE, UnitGid: DWORD, ChatColor: BYTE, ChatSubType: BYTE, Nick: NULLSTRING, Message: NULLSTRING,},
 	//{id: 0x27, UnitType: BYTE, UnitId: DWORD,  Count: BYTE, Unknown: BYTE, ARRAY[Count] (Show: BYTE, Unused: BYTE, MessageId: WORD, )},
 	//{id: 0x28, UpdateType: BYTE, UnitGid: DWORD, Timer: BYTE, ARRAY[96] (QuestBit: BYTE,)},
 	//{id: 0x29, 96: BYTE, QuestBit},
-
 	{id: 0x2A, TradeType: BYTE, Result: BYTE, Unknown: DWORD, NpcGid: DWORD, GoldInInventory: DWORD,},
 	{id: 0x2C, UnitType: BYTE, UnitId: DWORD, Sound: WORD,},
-	//ToDo; figure out
 	//{id: 0x3E, *},
 	{id: 0x3F, SellIcon: BYTE, ItemGid: DWORD, SkillId: WORD,},
 	{id: 0x40, ItemGid: DWORD, Unknown: DWORD, Unknown2: DWORD,},
@@ -424,43 +384,14 @@ let structs = [
 	{id: 0x4E, MercNameString: WORD, Seed: DWORD,},
 	{id: 0x4F,},
 	{id: 0x50, MessageType: WORD, Argument: WORD[6],},
-	{
-		id: 0x51,
-		ObjectType: BYTE,
-		ObjectId: DWORD,
-		ObjectCode: WORD,
-		X: WORD,
-		Y: WORD,
-		State: BYTE,
-		InteractionType: BYTE,
-	},
-	// {id: 0x52, 41: BYTE, QuestArray},
+	{id: 0x51, ObjectType: BYTE, ObjectId: DWORD, ObjectCode: WORD, X: WORD, Y: WORD, State: BYTE, InteractionType: BYTE,},
+	//{id: 0x52, 41: BYTE, QuestArray},
 	{id: 0x53, ActTBC: DWORD, AngleTBC: DWORD, Darkness: BYTE,},
-	{
-		id: 0x57,
-		MonsterGid: DWORD,
-		MonsterType: BYTE,
-		MonsterNameIDX: WORD,
-		anEnchant1: BYTE,
-		anEnchant2: BYTE,
-		anEnchant3: BYTE,
-		Filler: BYTE,
-		MonsterIsChampion: WORD,
-	},
+	{id: 0x57, MonsterGid: DWORD, MonsterType: BYTE, MonsterNameIDX: WORD, anEnchant1: BYTE, anEnchant2: BYTE, anEnchant3: BYTE, Filler: BYTE, MonsterIsChampion: WORD,},
 	{id: 0x58, UnitGid: DWORD, UIType: BYTE, Bool: BYTE,},
 	{id: 0x59, UnitId: DWORD, CharType: BYTE, CharName: NULLSTRING, X: WORD, Y: WORD,},
 	{id: 0x5A, MessageType: BYTE, Color: BYTE, Arg: DWORD, ArgTypes: BYTE, Name1: NULLSTRING, NAME2: NULLSTRING,},
-	{
-		id: 0x5B,
-		PacketLength: WORD,
-		PlayerId: DWORD,
-		CharType: BYTE,
-		CharName: NULLSTRING,
-		CharLvl: WORD,
-		PartyId: WORD,
-		NULL: DWORD,
-		NULL2: DWORD
-	},
+	{id: 0x5B, PacketLength: WORD, PlayerId: DWORD, CharType: BYTE, CharName: NULLSTRING, CharLvl: WORD, PartyId: WORD, NULL: DWORD, NULL2: DWORD},
 	{id: 0x5C, PlayerId: DWORD,},
 	{id: 0x5D, QuestId: BYTE, AlertFlags: BYTE, FilterStatus: BYTE, Extra: WORD,},
 	//{id: 0x5E, 37: BYTE, Quest]},
@@ -468,73 +399,23 @@ let structs = [
 	{id: 0x60, State: BYTE, AreaId: BYTE, UnitId: DWORD,},
 	{id: 0x61, Act: BYTE,},
 	{id: 0x62, UnitType: BYTE, UnitGid: DWORD, Unused: BYTE,},
-
 	{id: 0x63, WaypointGid: DWORD, SetOrDel: WORD, Waypoint1: DWORD, Waypoint2: DWORD, NULL: DWORD, NULL2: DWORD},
 	{id: 0x65, PlayerId: DWORD, Count: WORD,},
-	{
-		id: 0x67,
-		NpcGid: DWORD, /*0x01 = Walk || 0x17 = Run*/
-		RunType: BYTE,
-		X: WORD,
-		Y: WORD,
-		Unknown: WORD,
-		Unknown2: BYTE,
-		Unknown3: WORD,
-		Unknown4: BYTE,
-	},
-	{
-		id: 0x68,
-		NpcGid: DWORD,
-		RunType: BYTE,/*0x00 = Walk || 0x18 = Run*/
-		X: WORD,
-		Y: WORD,
-		TargetUnitType: BYTE,
-		TargetId: DWORD,
-		Unknown: WORD,
-		Unknown2: BYTE,
-		Unknown3: WORD,
-		Unknown4: BYTE,
-	},
+	{id: 0x67, NpcGid: DWORD, /*0x01 = Walk || 0x17 = Run*/RunType: BYTE, X: WORD, Y: WORD, Unknown: WORD, Unknown2: BYTE, Unknown3: WORD, Unknown4: BYTE,},
+	{id: 0x68, NpcGid: DWORD, RunType: BYTE,/*0x00 = Walk || 0x18 = Run*/X: WORD, Y: WORD, TargetUnitType: BYTE, TargetId: DWORD, Unknown: WORD, Unknown2: BYTE, Unknown3: WORD, Unknown4: BYTE,},
 	{id: 0x69, NpcGid: DWORD, State: BYTE, X: WORD, Y: WORD, UnitLife: BYTE, Unknown: BYTE,},
 	{id: 0x6A, NpcGid: DWORD, Unknown0: BYTE, Unknown1: BYTE, Unknown2: DWORD, Unknown3: BYTE,},
 	{id: 0x6B, NpcGid: DWORD, Action: BYTE, NULL: DWORD, NULL2: WORD, X: WORD, Y: WORD,},
 	{id: 0x6C, NpcGid: DWORD, AttackType: WORD, TargetId: DWORD, TargetType: BYTE, X: WORD, Y: WORD,},
 	{id: 0x6D, NpcGid: DWORD, X: WORD, Y: WORD, UnitLife: BYTE,},
-	{
-		id: 0x73,
-		Unused: DWORD,
-		Unknown: WORD,
-		Unknown2: DWORD,
-		Unknown3: DWORD,
-		Unknown4: DWORD,
-		Unknown5: DWORD,
-		Unknown6: WORD,
-		OwnerType: BYTE,
-		OwnerGid: DWORD,
-		Unknown7: BYTE,
-		PierceIdxValue: BYTE,
-	},
-	{id: 0x74, Assign/*0x00 = False || 0x01 True*/: BYTE, OwnerId: DWORD, CorpseId: DWORD,},
-	{
-		id: 0x75,
-		UnitId: DWORD,
-		PartyId: WORD,
-		CharLevel: WORD,
-		Relationship: WORD,
-		InYourParty/*? 0x00 = False || 0x01 = True*/: WORD,
-	},
+	{id: 0x73, Unused: DWORD, Unknown: WORD, Unknown2: DWORD, Unknown3: DWORD, Unknown4: DWORD, Unknown5: DWORD, Unknown6: WORD, OwnerType: BYTE, OwnerGid: DWORD, Unknown7: BYTE, PierceIdxValue: BYTE,},
+	{id: 0x74, Assign: BYTE, OwnerId: DWORD, CorpseId: DWORD,},
+	{id: 0x75, UnitId: DWORD, PartyId: WORD, CharLevel: WORD, Relationship: WORD, InYourParty: WORD,},
 	{id: 0x76, UnitType: BYTE, UnitId: BYTE,},
 	{id: 0x77, Action: BYTE,},
 	{id: 0x78, CharName: NULLSTRING, UnitId: DWORD,},
 	{id: 0x79, GoldOwner: BYTE, Amount: DWORD,},
-	{
-		id: 0x7A,
-		ChangeType: BYTE,/*0x00 = Unsummoned/Lost Sight || 0x01 = Summoned/Assign*/
-		Skill: BYTE,
-		PetType: WORD,
-		OwnerId: DWORD,
-		PetId: DWORD,
-	},
+	{id: 0x7A, ChangeType: BYTE, Skill: BYTE, PetType: WORD, OwnerId: DWORD, PetId: DWORD,},
 	{id: 0x7B, Slot: BYTE, Skill: BYTE, /*0x00 = Right || 0x80 = Left*/Type: BYTE, Item: DWORD},
 	{id: 0x7C, Type: BYTE, ItemId: DWORD,},
 	{id: 0x7D, UnitType: BYTE, UnitGid: DWORD, ItemGid: DWORD, AndValue: DWORD, dwFlagsAfterAnd: DWORD,},
@@ -553,63 +434,28 @@ let structs = [
 	//{id: 0x91, ACT: BYTE, 12: WORD, Str/NPCId]},
 	{id: 0x92, UnitType: BYTE, UnitGid: DWORD,},
 	{id: 0x93, PlayerGid: DWORD, signedUnknown: BYTE, Unknown: BYTE, Unknown2: BYTE,},
-	//ToDo; deal with arrays
 	//{id: 0x94, Count: BYTE, PlayerId: DWORD, ARRAY[Count] ( SkillId: WORD, Level: BYTE, )},
 	//{id: 0x95, [BITS[15] HP] [BITS[15] MP] [BITS[15] Stamina] [BITS[7] HPRegen] [BITS[7] MPRegen] [BITS[16] x] [BITS[16] y] [BITS[8] Vx] [ BITS[8] Vy]},
 	//{id: 0x96, [BITS[15] Stamina] [BITS[16] x] [BITS[16] y] [BITS[8 Vx] [BITS[8] Vy]},
 	{id: 0x97,},
 	{id: 0x98, UnitGid: DWORD, Value: WORD,},
-	{
-		id: 0x99,
-		AttackerType: BYTE,
-		AttackerGid: DWORD,
-		SkillId: WORD,
-		SkillLevel: BYTE,
-		TargetType: BYTE,
-		TargetGid: DWORD,
-		Unknown: WORD,
-	},
-	{
-		id: 0x9A,
-		AttackerType: BYTE,
-		AttackerGid: DWORD,
-		SkillId: WORD,
-		Unused: WORD,
-		SkillLevel: BYTE,
-		TargetX: WORD,
-		TargetY: WORD,
-		Unnown: WORD,
-	},
+	{id: 0x99, AttackerType: BYTE, AttackerGid: DWORD, SkillId: WORD, SkillLevel: BYTE, TargetType: BYTE, TargetGid: DWORD, Unknown: WORD,},
+	{id: 0x9A, AttackerType: BYTE, AttackerGid: DWORD, SkillId: WORD, Unused: WORD, SkillLevel: BYTE, TargetX: WORD, TargetY: WORD, Unnown: WORD,},
 	{id: 0x9B, MercNameId: WORD, ReviveCost: DWORD,},
-	//Item's,
 	//{id: 0x9C, *},
 	//{id: 0x9D, *},
-
 	{id: 0x9E, StatId: BYTE, MercGid: DWORD, NewValue: BYTE,},
 	{id: 0x9F, StatId: BYTE, MercGid: DWORD, NewValue: WORD,},
 	{id: 0xA0, StatId: BYTE, MercGid: DWORD, NewValue: DWORD,},
 	{id: 0xA1, StatId: BYTE, MercGid: DWORD, AddValue: BYTE,},
 	{id: 0xA2, StatId: BYTE, MercGid: DWORD, AddValue: WORD,},
-	{
-		id: 0xA3,
-		AuraStat: BYTE,
-		SkillId: WORD,
-		SkillLevel: WORD,
-		UnitType: BYTE,
-		UnitGid: DWORD,
-		TargetType: BYTE,
-		TargetGid: DWORD,
-		TargetX: DWORD,
-		TargetY: DWORD,
-	},
+	{id: 0xA3, AuraStat: BYTE, SkillId: WORD, SkillLevel: WORD, UnitType: BYTE, UnitGid: DWORD, TargetType: BYTE, TargetGid: DWORD, TargetX: DWORD, TargetY: DWORD,},
 	{id: 0xA4, ClassId: WORD,},
 	{id: 0xA5, UnitType: BYTE, UnitGid: DWORD, SkillId: WORD,},
 	{id: 0xA6,},
 	{id: 0xA7, UnitType: BYTE, UnitId: DWORD, State: BYTE,},
-	//ToDo; deal with states
 	//{id: 0xA8, UnitType: BYTE, UnitId: DWORD, PacketLength: BYTE, State: BYTE, [VOID State Effects]},
 	{id: 0xA9, UnitType: BYTE, UnitId: DWORD, State: BYTE,},
-	//ToDo; deal with states
 	//{id: 0xAA, UnitType: BYTE, UnitId: DWORD, PacketLength: BYTE, [VOID State Info]},
 	{id: 0xAB, UnitType: BYTE, UnitId: DWORD, UnitLife: BYTE,},
 	//{id: 0xAC, UnitId: DWORD, UnitCode: WORD, X: WORD, Y: WORD, UnitLife: BYTE, PacketLength: BYTE, [VOID State Info]},

@@ -56,11 +56,22 @@ class DiabloProxy {
 			server.pipe(client);
 			return null;
 		}
-		const dataHandler = (from, to, hooks) => buffer => !hooks.map(client => client.call(this, buffer) === DiabloProxy.BLOCK).some(_ => _) && to.write(buffer);
 
+		const dataHandler = (to, hooks) => buffer => {
+			try {
+				hooks.map(proxy => proxy.call(this, buffer));
+			} catch(e) {
+				console.log(e);
+			} finally {
+				to.write(buffer);
+			}
+		}
+		
 		this.hooks = {client: [], server: []};
-		client.on('data', dataHandler(client, server, this.hooks.client));
-		server.on('data', dataHandler(server, client, this.hooks.server));
+
+		client.pipe(server); // For now
+		//client.on('data', dataHandler(server, this.hooks.client));
+		server.on('data', dataHandler(client, this.hooks.server));
 
 		this.ip = ip;
 		this.port = port;
@@ -75,7 +86,6 @@ class DiabloProxy {
 	}
 
 	static instances = [];
-	static BLOCK = Symbol('block');
 }
 
 module.exports = DiabloProxy;
