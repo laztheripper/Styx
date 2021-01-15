@@ -1,5 +1,4 @@
 const BitReader = require('./BitReader');
-const ItemReader = require('./ItemReader');
 const {logPacket} = require('./Util');
 
 class GameServer extends require('events') {
@@ -37,33 +36,13 @@ class GameServer extends require('events') {
 				//buffer.copy(packetBuffer, 0);
 				const packetBuffer = buffer.slice(0, size);
 				buffer = buffer.slice(size, buffer.length); // Twice as fast
-				//const tmpBuffer = Buffer.alloc(buffer.length - size);
-				//buffer.copy(tmpBuffer, 0, size);
-				//buffer = tmpBuffer;
+				
+				if (packetBuffer[0] === 0x9C || packetBuffer[0] === 0x9D) {
+					//logPacket('9c/9d: ', packetBuffer);
+					console.log(packetBuffer);
+				}
 
 				let packetData;
-				/*switch (packetBuffer[0]) { // In case it is something special
-					case 0xAC: //Assign NPC / new monster
-						this.game.unitCollector.fromPacket(packetBuffer);
-						break;
-					// Items
-					case 0x9C:
-					case 0x9D:
-						try {
-							//packetData = new ItemReader(packetBuffer, game);
-						} catch(e){
-							console.log('Failed to parse packet ',e);
-							continue;
-						}
-						break;
-					default:
-						// Create the packets
-						packetData = GameServer.packetMap[packetBuffer[0]];
-						packetData = packetData && packetData.hasOwnProperty('fromBuffer') ? packetData.fromBuffer(packetBuffer) : {PacketId: packetBuffer[0]};
-						packetData.raw = packetBuffer;
-						packetData.packetIdHex = packetData.PacketId.toString(16);
-				}*/
-
 				packetData = GameServer.packetMap[packetBuffer[0]];
 				packetData = packetData && packetData.hasOwnProperty('fromBuffer') ? packetData.fromBuffer(packetBuffer) : {PacketId: packetBuffer[0]};
 				packetData.raw = packetBuffer;

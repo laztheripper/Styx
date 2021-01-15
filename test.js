@@ -48,10 +48,7 @@ var start = Date.now();
 for (let i = 0; i < 1; i++) stuff();
 console.log(Date.now() - start);
 
-function popo() {
-    popo.on('error', () => console.log('wwd'));
+var a = Symbol('block');
+var b = Symbol('block');
 
-    throw new Error('popo');
-}
-
-popo.call(this, 'penis').on('error', () => console.log('wdw'));
+console.log(a === a)

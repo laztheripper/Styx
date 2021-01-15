@@ -6,7 +6,6 @@ class Unit extends require('events') {
 		this.classid = UnitCode;
 		this.x = x;
 		this.y = y;
-		this.life = life;
 		this.isMe = false;
 		this.items = [];
 	}

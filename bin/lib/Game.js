@@ -3,7 +3,9 @@ const GameClient = require('./GameClient');
 const BaseLevel = require('./BaseLevel');
 const UnitCollector = require('./UnitCollector');
 const ItemCollector = require('./ItemCollector');
+const ItemReader = require('./ItemReader');
 const BufferHelper = require('./BufferHelper');
+const { logPacket } = require('./Util');
 
 class Game {
 	constructor(diabloProxy) {
@@ -44,6 +46,14 @@ class Game {
 			this.charname = BufferHelper.getString(packetData.raw, 16, 24);
 			console.log('Account: ' + this.account);
 			console.log('Character: ' + this.charname);
+		});
+		this.gameServer.on(0x9C, ({packetData}) => {
+			//try {packetData = new ItemReader(packetData.raw, this)} catch(e){console.log('Failed to parse item packet ',e)}
+			//logPacket(packetData.raw);
+		});
+		this.gameServer.on(0x9D, ({packetData}) => {
+			//try {packetData = new ItemReader(packetData.raw, this)} catch(e){console.log('Failed to parse item packet ',e)}
+			//logPacket(packetData.raw);
 		});
 		/*this.gameServer.once(0x03, ({packetData}) => {
 			this.mapid = packetData.Map_ID;
