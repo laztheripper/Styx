@@ -3,7 +3,7 @@ const GameClient = require('./GameClient');
 const BaseLevel = require('./BaseLevel');
 const UnitCollector = require('./UnitCollector');
 const ItemCollector = require('./ItemCollector');
-const ItemReader = require('./ItemReader');
+const Item = require('./ItemReader');
 const BufferHelper = require('./BufferHelper');
 const { logPacket } = require('./Util');
 
@@ -48,7 +48,15 @@ class Game {
 			console.log('Character: ' + this.charname);
 		});
 		this.gameServer.on(0x9C, ({packetData}) => {
-			//try {packetData = new ItemReader(packetData.raw, this)} catch(e){console.log('Failed to parse item packet ',e)}
+			try {
+				console.log(packetData);
+				let itemBytes = Buffer.alloc(packetData.raw.length);
+				packetData.raw.copy(itemBytes, 0);
+				let it = new Item(itemBytes);
+				console.log(it);
+			} catch(e) {
+				console.log('Failed to parse item packet ',e);
+			}
 			//logPacket(packetData.raw);
 		});
 		this.gameServer.on(0x9D, ({packetData}) => {

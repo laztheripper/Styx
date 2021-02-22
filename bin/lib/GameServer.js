@@ -37,10 +37,10 @@ class GameServer extends require('events') {
 				const packetBuffer = buffer.slice(0, size);
 				buffer = buffer.slice(size, buffer.length); // Twice as fast
 				
-				if (packetBuffer[0] === 0x9C || packetBuffer[0] === 0x9D) {
-					//logPacket('9c/9d: ', packetBuffer);
-					console.log(packetBuffer);
-				}
+				//if (packetBuffer[0] === 0x9C || packetBuffer[0] === 0x9D) {
+				//	//logPacket('9c/9d: ', packetBuffer);
+				//	console.log(packetBuffer);
+				//}
 
 				let packetData;
 				packetData = GameServer.packetMap[packetBuffer[0]];

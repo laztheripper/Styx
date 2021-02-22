@@ -1,5 +1,5 @@
-module.exports.ItemContainer = {
-	Unspecified: 0,
+module.exports.ItemLocation = {
+	/*Unspecified: 0,
 	Inventory: 2,
 	TraderOffer: 4,
 	ForTrade: 6,
@@ -16,7 +16,22 @@ module.exports.ItemContainer = {
 	MiscTab: 0x88,
 	//ArmorTabBottom  :0x83, // Buffer merged with ArmorTab
 	//WeaponTab1Bottom:0x85, // Buffer merged with WeaponTab1
-	//MiscTabBottom   :0x89, // Buffer merged with WeaponTab2
+	//MiscTabBottom   :0x89, // Buffer merged with WeaponTab2*/
+
+	Disappeared: -1,
+	Equipment: 0x00,
+	Inventory: 0x01,
+	TraderOffer: 0x02,
+	ForTrade: 0x03,
+	Cube: 0x04,
+	Stash: 0x05,
+	Ground: 0x06,
+	Belt: 0x07,
+	Item: 0x08,
+	ArmorTab: 0x101,
+	WeaponTab1: 0x102,
+	WeaponTab2: 0x103,
+	MiscTab: 0x104,
 };
 
 module.exports.ItemFlags = {
@@ -132,12 +147,12 @@ module.exports.ItemQuality = {
 };
 
 module.exports.ItemDestination = {
-	Unspecified: 0,
-	Equipment: 1,
-	Belt: 2,
-	Ground: 3,
-	Cursor: 4,
-	Item: 6,
+	Container: 0,
+	Equipment: 4,
+	Belt: 8,
+	Ground: 0x0C,
+	Cursor: 0x10,
+	Item: 0x18,
 };
 
 module.exports.ItemCategory = {

@@ -1,54 +1,32 @@
-var events = require('events');
-var eventEmitter = new events.EventEmitter();
+const Item = require('./bin/lib/ItemReader');
 
+items = [
+    '9c 04 14 10 e2 29 4b cc 10 00 a0 00 65 00 32 22 27 53 03 02',
+    '9C 04 25 10 1C 00 00 00 10 00 80 00 65 00 04 A2 56 76 07 82 F1 25 C5 80 11 D1 A2 D8 87 03 39 E9 8D A6 05 FF 01',
+    '9C 04 34 01 06 00 00 00 11 08 80 04 64 00 0C 52 47 07 07 32 ED 90 1D 28 0B F1 D4 98 0D FF 1F 2E B0 85 E7 FF 07 82 59 71 80 09 86 B1 11 FC 11 37 03 1E F2 1F',
+    //'9C 04 30 06 CF 00 00 00 10 00 80 00 65 00 0C 32 26 76 07 82 90 21 0A 19 22 BF 11 35 8B 51 1E 48 3E 4C C0 E2 42 80 81 00 E7 91 67 C8 1E 6E FE 03', // Rare bow
+    //'9C 04 1B 01 A8 00 00 00 10 00 80 00 65 00 0C 12 57 97 06 82 40 10 08 18 10 F8 0F', // Cracked Quilted Armor
+//	'9C 04 1A 05 A0 00 00 00 10 00 80 00 65 00 0E 42 76 26 07 02 41 80 02 01 FF 01', // cRUDE DAGGER
+//	'9C 04 1D 01 94 00 00 00 10 00 80 00 65 00 0C 22 E7 76 06 02 C6 A0 1D 68 68 80 F0 E0 3F', // 15% ed sup ring mail
+    //'9C 04 1E 05 92 00 00 00 10 00 80 00 65 00 10 82 16 86 07 02 06 01 80 6F 70 70 A8 20 FC 07', // magic hand axe of worth
+    //'9c 04 14 10 46 8b fd dd 10 00 a0 00 65 00 32 22 27 53 03 02',
+    //'9c 04 14 10 a3 a5 fe 6e 10 00 a0 00 65 00 50 22 27 33 03 02',
+    //'9c 04 14 10 d1 32 7f a7 10 00 a0 00 65 00 70 22 27 33 03 02',
+    //'9c 04 14 10 68 99 bf c3 10 00 a0 00 65 00 30 22 27 33 03 02',
+//	'9c 04 2c 10 b4 ac df 61 10 00 80 00 65 00 60 a2 56 76 07 02 a8 25 55 be b8 d8 29 d3 81 80 52 05 c3 42 e2 82 81 21 f1 c9 00 95 f8 0f',
+//	'9c 0e 14 10 5a b6 ef 30 10 00 a2 00 65 08 00 80 06 17 03 02',
+//	'9c 04 1a 05 2d bb 77 18 10 08 80 00 02 00 aa ca 56 76 06 02 83 20 24 42 fe 03',
+    //'9c 04 14 10 96 bd 3b 9c 10 00 a2 00 65 00 52 92 36 37 06 02',
+    //'9d 06 21 05 cb be 1d 4e 00 46 8b fd dd 11 00 82 00 65 84 08 30 37 47 07 82 80 40 41 61 0d 89 fc 07'
+];
 
+for (let i = 0; i < items.length; i++) {
+	var s = Buffer.from(items[i].replace(/ /g, ''), 'hex');
+	var n = Buffer.alloc(s.length);
+	s.copy(n, 0);
+	items[i] = n;
 
-class Penis {
-    constructor(emitter) {
-        this.large = true;
-        this.emitter = emitter;
-
-        this.emitter.on('make', () => this.thing());
-    }
-
-    thing() {
-        var i = 1;
-
-        this.emitter.once('scream', () => {
-            var f = 2;
-            console.log(i);
-
-            this.emitter.once('scream', () => {
-                console.log(i);
-                console.log(f);
-            });
-        });
-    }
-
-
+    
+    let it = new Item(items[i]);
+    console.log(it);
 }
-
-const penis = new Penis(eventEmitter);
-
-//eventEmitter.emit('make');
-//eventEmitter.emit('scream');
-//eventEmitter.emit('scream');
-
-const BufferHelper = require('./bin/lib/BufferHelper');
-
-
-function stuff() {
-    var buf1 = Buffer.from([0x70, 0x70, 0x70, 0x70, 0x70, 0x00, 0x00, 0x00, 0x00, 0x01]);
-    var buf2 = Buffer.from([0x66, 0x66]);
-    var size = 2;
-
-}
-
-var start = Date.now();
-for (let i = 0; i < 1; i++) stuff();
-console.log(Date.now() - start);
-
-var a = Symbol('block');
-var b = Symbol('block');
-
-console.log(a === a)

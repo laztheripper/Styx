@@ -1,6 +1,7 @@
 class Stat {
 	constructor(...args) {
 		this.baseStat = args.shift();
+		this.name = this.baseStat.stat;
 		this.__proto__.init.apply(this, args);
 	}
 }
