@@ -1,37 +1,61 @@
 const Item = require('./Item');
 
 class ItemCollector {
-	/** @param {Game} game */
 	constructor(game) {
 		this.game = game;
-		this.items = [];
+		this.items = {};
 	}
 
 	newItem(item) {
-		this.items.push(item);
-		this.game.unitCollector.collection.push(item); // Add it to the unit collector obv, as
-
-		// An item i own, add directly
-		if (item.ownerType === 0 && item.ownerUID === this.game.me.uid) {
-			this.game.me.items.push(item);
+		if (item.remove) {
+			this.remove(item.uid);
+			return;
 		}
 
-		// Is this item socketed in another item?
-		if (item.ownerType === 4) {
-			// Lets find the owner
-			item.parent = this.items.find(element => element.uid === item.ownerUID);
+		this.add(item);
+	}
 
-			// If parent is found, add it to its list of items
-			if (item.parent) item.parent.items.push(item);
+	add(item) {
+		this.items[item.uid] = item;
+		//this.game.unitCollector.collection[4][item.uid] = item; // Add it to the unit collector
+
+		switch (item.ownerType) {
+			case 0:
+				this.game.me.items[item.uid] = item;
+				break;
+			case 1:
+				this.game.merc.items[item.uid] = item;
+				break;
+			case 4:
+				this.items[item.ownerUID].items[item.uid] = item;
+				item.parent = item.ownerUID;
+				break;
+		}
+	}
+
+	remove(uid) { // Remove an item from collector, ie items of other players. we only care about ours. also remove all socketed items (children of parent)
+		if (typeof uid === 'object') uid = uid.uid;
+		if (!this.items.hasOwnProperty(uid)) return;
+		for (let child in this.items[uid].items) this.remove(child);
+		delete this.items[uid];
+		try { delete this.game.me.items[uid]; } catch(e) {}
+		try { delete this.game.merc.items[uid]; } catch(e) {}
+		//try { delete this.game.unitCollector.collection[4][uid]; } catch(e) {}
+	}
+
+	clearOwner(owner) { // remove all items of unit and ofc socketed items
+		for (let uid in owner.items) {
+			this.remove(uid);
+			console.log('removed', uid);
 		}
 	}
 
 	destroy() {
-		this.items.splice(0, this.items.length);
+		this.items = {};
+		this.me.items = {};
+		this.merc.items = {};
 		this.game = null;
 	}
-
 }
-
 
 module.exports = ItemCollector;

@@ -18,7 +18,6 @@ class ElementalSkillsBonusStat extends Stat {
 		this.element = element;
 		this.val = val;
 	}
-
 }
 
 class ClassSkillsBonusStat extends Stat {
@@ -33,7 +32,6 @@ class AuraStat extends Stat {
 		this.skill = skill;
 		this.level = level;
 	}
-
 }
 
 class SkillBonusStat extends Stat {
@@ -59,7 +57,6 @@ class SkillOnEventStat extends Stat {
 		this.skill = skill;
 		this.chance = chance;
 	}
-
 }
 
 class SkillTabBonusStat extends Stat {
@@ -69,7 +66,6 @@ class SkillTabBonusStat extends Stat {
 		this.unknown = unknown;
 		this.val = val;
 	}
-
 }
 
 class PerLevelStat extends Stat {

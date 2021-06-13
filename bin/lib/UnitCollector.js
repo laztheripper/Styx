@@ -5,72 +5,46 @@ class UnitCollector extends require('events') {
 	constructor(game) {
 		super();
 		this.game = game;
-		this.collection = [];
-		this.collectData();
-		delete this.collectData;
+		this.collection = {
+			0: {}, // Players
+			1: {}, // Mobs, NPCs, Hirelings, Summons
+			2: {}, // Tile entities
+			3: {}, // Missiles
+			4: {}, // Items
+			5: {}, // Warps
+		};
+		this.collect();
+		delete this.collect;
 	}
 
-	collectData() {
-		const fetchUnit = callback =>
-			({packetData}) =>
-				(unit =>
-						unit && callback(unit, packetData)
-				)(this.collection.find(
-					unit => unit.uid === packetData.UnitId && unit.type === packetData.UnitType)
-				);
+	collect() {
+		//const fetchUnit = callback => ({packetData}) =>
+		//	(unit =>
+		//		unit && callback(unit, packetData)
+		//	)(this.collection.find(
+		//		unit => unit.uid === packetData.UnitId && unit.type === packetData.UnitType)
+		//	);
+		
 		// Just to set up
-		this.game.gameServer.on(0x15/*Reassign*/, fetchUnit((unit, packetData) => {
-			unit.x = packetData.X;
-			unit.y = packetData.Y;
-		}));
+		//this.game.gameServer.on(0x15 /* Reassign */, fetchUnit((unit, packetData) => {
+		//	unit.x = packetData.X;
+		//	unit.y = packetData.Y;
+		//}));
+		
 		// Remove units
-		this.game.gameServer.on(0x0A/*Remove Object.    */, fetchUnit((unit, packetData) => this.collection.splice(this.collection.indexOf(unit), 1)));
-
-		this.game.gameServer.on(0x0B/*Game Handshake. */, fetchUnit((unit, packetData) => {
-			console.log();
-		}));
-		this.game.gameServer.on(0x0C/*NPC Hit.       */, fetchUnit((unit, packetData) => {
-			if (this.game.me.uid === packetData.uid) {
-				// ToDo; Do something with the hit state of us (calculate how long it takes whatever)
-				console.log();
-			}
-		}));
-		this.game.gameServer.on(0x0D/*Player Stop.    */, fetchUnit((unit, packetData) => {
-			unit.x = packetData.X;
-			unit.y = packetData.Y;
-			if (this.game.me === unit && packetData.X + packetData.Y !== unit.x + unit.y) {
-				// We are desyncing.
-				const sendBuff = Buffer.alloc(11);
-				sendBuff.writeUInt8(0x15, 0); // reassign
-				sendBuff.writeUInt8(0, 1); // Unit type
-				sendBuff.writeUInt32LE(unit.uid, 2); // Unit uid
-				sendBuff.writeUInt16LE(packetData.X, 2 + 4); // New x pos
-				sendBuff.writeUInt16LE(packetData.Y, 2 + 4 + 2);
-				sendBuff.writeUInt16LE(0x01 /*warp*/, 2 + 4 + 2 + 2);
-				this.game.diabloProxy.client.write(sendBuff); // Send the client the reassign packet
-			}
-			unit.emit('stop'); // In case we track the unit walking
-		}));
-		this.game.gameServer.on(0x0E/*Object State.    */, fetchUnit((unit, packetData) => {
-			console.log();
-			//ToDO; make
-		}));
-		this.game.gameServer.on(0x0F/*Player Move.    */, fetchUnit((unit, packetData) => {
-			console.log();
-		}));
-		this.game.gameServer.on(0x10/*Player ToTarget.  */, fetchUnit((unit, packetData) => {
-			console.log();
-		}));
+		this.game.gameServer.on(0x0A /* Remove Unit */, ({packetData}) => {
+			try { delete this.collection[packetData.UnitType][packetData.UnitId] } catch (e) {}
+		});
 
 	}
 
 	destroy() {
-		this.collection.splice(0, this.items.length);
+		for (let unitType in this.collection) this.collection[unitType] = {};
 		this.game = null;
 	}
 
 	add(newUnit) {
-		this.collection.push(newUnit);
+		this.collection[newUnit.UnitType][newUnit.UnitId] = newUnit;
 		this.emit('new', newUnit);
 	}
 
@@ -91,20 +65,6 @@ class UnitCollector extends require('events') {
 		};
 		const length = self.byte;
 		this.add(new Unit(...Object.keys(unit).map(key => unit[key])));
-
-	}
-
-	createMe() {
-		const me = new Unit();
-		me.isMe = true;
-		this.collection.push(me);
-		this.game.gameServer.once(0x59, ({packetData}) => {
-			me.uid = packetData.UnitId;
-			me.x = packetData.x;
-			me.y = packetData.y;
-			me.classid = packetData.CharType;
-		});
-		return me;
 	}
 }
 

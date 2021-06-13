@@ -22,7 +22,7 @@ class Connection {
 	}
 
 	connect(ipAddr, port, connectBuffer) {
-		console.log(ipAddr + port);
+		console.log(ipAddr + ':' + port);
 
 		const remote = net.connect(port, ipAddr, () => {
 			connectBuffer.writeUInt8(0x00, 1); // Success code

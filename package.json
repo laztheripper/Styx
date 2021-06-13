@@ -1,0 +1,24 @@
+{
+  "name": "Styx",
+  "version": "1.0.0",
+  "description": "A man in the middle app for Diablo 2, similar to RedVex.\r Set it up so game.exe goes trough this socks5 server on localhost.",
+  "main": "index.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/laztheripper/socks5-diablo.git"
+  },
+  "keywords": [],
+  "author": "LAZ",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/laztheripper/socks5-diablo/issues"
+  },
+  "homepage": "https://github.com/laztheripper/socks5-diablo#readme",
+  "devDependencies": {
+    "electron": "^11.3.0"
+  }
+}

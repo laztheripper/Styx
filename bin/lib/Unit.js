@@ -1,5 +1,5 @@
 class Unit extends require('events') {
-	constructor(UnitId, UnitType, UnitCode, x, y, life) {
+	constructor(UnitId, UnitType, UnitCode, x, y) {
 		super();
 		this.uid = UnitId;
 		this.type = UnitType;
@@ -7,7 +7,7 @@ class Unit extends require('events') {
 		this.x = x;
 		this.y = y;
 		this.isMe = false;
-		this.items = [];
+		this.items = {};
 	}
 }
 

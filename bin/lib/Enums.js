@@ -37,49 +37,35 @@ module.exports.ItemLocation = {
 module.exports.ItemFlags = {
 	None: 0,
 	Equipped: 1,
-	// UNKNOWN       :2,
-	// UNKNOWN       :4,
-	InSocket: 8,
-	// Not undentified, really... also set for items that cannot be identified.
+	Bought: 2,
+	Cursor: 4,
+	InSocket: 8, // Applies to runes and jewels but not gems
 	Identified: 0x10,
-	// Has to do with aura / state change !?
-	x20: 0x20,
+	Destroyed: 0x20,
 	SwitchedIn: 0x40,
 	SwitchedOut: 0x80,
 	Broken: 0x100,
-	// UNKNOWN       :0x200,
-	// Sometimes on Mana, Healing and Rejuvenation potions and runes... use is unknown.
-	Duplicate: 0x400,
+	Restored: 0x200,
+	Duplicate: 0x400, // Sometimes on Mana, Healing and Rejuvenation potions and runes... use is unknown.
 	Socketed: 0x800,
-	// Set on items equipped by Valkyrie...
 	OnPet: 0x1000,
-	// Set on AddToShop (but not for items I sold), on items equipped by Valkyrie.
-	// Also set on AddToGround and sometimes(?) on quest items... Special Interact ? Is New ?
-	x2000: 0x2000,
-	NotInSocket: 0x4000, // Illegal Equip ?
-	// UNKNOWN       :0x8000,
-	// Is a player's ear. Ear packets have a different structure...
+	New: 0x2000,
+	Disabled: 0x4000, // Illegal Equip ?
+	Hardcore: 0x8000,
 	Ear: 0x10000,
-	// Item a character started with (meaning the item worthless to resell.)
 	StartItem: 0x20000,
-	// UNKNOWN        :0x40000,
-	// UNKNOWN        :0x80000,
-	// UNKNOWN        :0x100000,
-	// Item that doesn't have an ILevel or stats.
+	Restrict: 0x40000,
+	Server: 0x80000,
+	//UNKNOWN: 0x100000,
 	Simple: 0x200000,
 	Ethereal: 0x400000,
-	// Meaning is unknown...
-	Any: 0x800000,
+	Any: 0x800000, // Item is saved
 	Personalized: 0x1000000,
-	// Item a town folk is offering for gambling (same purpose as Simple: no ILevel + extra info.)
 	Gamble: 0x2000000,
 	Runeword: 0x4000000,
-	// Induce State Change !?
-	x8000000: 0x8000000,
-	// UNKNOWN        :0x10000000,
-	// UNKNOWN        :0x20000000,
-	// UNKNOWN        :0x40000000,
-	// UNKNOWN        :0x80000000
+	Magical: 0x8000000,
+	StaffMods: 0x10000000,
+	Cursed: 0x20000000,
 };
 
 module.exports.EquipmentLocation = {
@@ -547,4 +533,18 @@ module.exports.StatType = { // Probably won't be used, but whatevs
 	PassiveMagicMastery: 357,
 	PassiveMagicPierce: 358,
 	Invalid: 359,
+};
+
+module.exports.MenuAction = { // S->C 0x77
+	TradeRequestSent: 0x00,
+	TradeRequestReceived: 0x01,
+	TradeAccepted: 0x05, // Other player has clicked "accept trade"
+	TradeRequestAccepted: 0x06, // Default state of trade when neither party has clicked "accept trade" 
+	TradeDeclined: 0x0C,
+	TradeCompleted: 0x0D, // Both parties clicked "accept trade"
+	TradeLocked: 0x0E, // "accept trade" button disabled (red)
+	TradeUnlocked: 0x0F, // "accept trade" button re-enabled
+	OpenStash: 0x10,
+	CloseStash: 0x11,
+	OpenCube: 0x15,
 };

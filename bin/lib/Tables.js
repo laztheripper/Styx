@@ -46,6 +46,7 @@ const MagicSuffix	= readTable('MagicSuffix.txt');
 const SetItem		= readTable('SetItems.txt');
 const Color 		= readTable('colors.txt');
 const Runeword		= readTable('Runes.txt');
+const Unique		= readTable('UniqueItems.txt');
 
 const BaseCodeIndex	= {}; // Base code: row index
 const ItemStatIndex	= {}; // Stat: row index
@@ -73,11 +74,9 @@ const RunewordIndex	= {}; // Runeword Name (ie Runeword96): row index
 		
 		while (equivs.length) {
 			let equiv = equivs.shift();
-			types.push(ItemType[TypeCodeIndex[equiv]].rowindex);
+			const {equiv1, equiv2, rowindex} = ItemType[TypeCodeIndex[equiv]];
 
-			let equiv1 = ItemType[TypeCodeIndex[equiv]].equiv1;
-			let equiv2 = ItemType[TypeCodeIndex[equiv]].equiv2;
-
+			types.push(rowindex);
 			if (equiv1) equivs.push(equiv1);
 			if (equiv2) equivs.push(equiv2);
 		}
@@ -97,6 +96,7 @@ module.exports.MagicSuffix	= MagicSuffix;
 module.exports.SetItem		= SetItem;
 module.exports.Color		= Color;
 module.exports.Runeword		= Runeword;
+module.exports.Unique		= Unique;
 
 // Dicts
 module.exports.BaseCodeIndex	= BaseCodeIndex;

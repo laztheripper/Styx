@@ -18,6 +18,19 @@ class BufferHelper {
 
 		return tmpbuff.toString(encoding);
 	}
+
+	static getCString(buffer, size, offset = 0) {
+		var tmpbuff = Buffer.alloc(buffer.length),
+			str = '';
+
+		buffer.copy(tmpbuff, 0);
+		for (let i = 0; i < size; i++) {
+			if (!tmpbuff[i + offset]) break;
+			str += String.fromCharCode(tmpbuff[i + offset]);
+		}
+
+		return str;
+	}
 }
 
 module.exports = BufferHelper;

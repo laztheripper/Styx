@@ -7,6 +7,7 @@
 
 const BitReader = require('./BitReader');
 const {ItemFlags, ItemLocation, EquipmentLocation, ItemActionType, ItemQuality, ItemDestination, ItemAffixType} = require('./Enums');
+const ItemCollector = require('./ItemCollector');
 const {ReanimateStat, ElementalSkillsBonusStat, ClassSkillsBonusStat, AuraStat, SkillBonusStat, ChargedSkillStat, SkillOnEventStat, SkillTabBonusStat, PerLevelStat, DamageRangeStat, ColdDamageStat, PoisonDamageStat, ReplenishStat, SignedStat, UnsignedStat,} = require('./StatTypes');
 const {
 	// Tables
@@ -20,6 +21,7 @@ const {
 	SetItem,
 	Color,
 	Runeword,
+	Unique,
 	
 	// Dicts
 	BaseCodeIndex,
@@ -63,6 +65,23 @@ class ItemAffix {
 }
 
 class Item extends require('./Unit') {
+	static fromPacket(packet, game) {
+		var it, bytes;
+
+		try {
+			bytes = Buffer.alloc(packet.length);
+			packet.copy(bytes, 0);
+			it = new Item(bytes, game);
+		} catch(e) {
+			console.log('Failed to parse item packet ', e);
+			return false;
+		}
+
+		console.log(it.code, it.uid, it.ownerType, it.ownerUID);
+		//console.log(it);
+		return it;
+	}
+
 	constructor(buffer, game) {
 		super();
 		this.packet = Buffer.alloc(buffer.length);
@@ -71,40 +90,43 @@ class Item extends require('./Unit') {
 		Object.defineProperties(p, BitReader.shortHandBr(br));
 		br.pos = 8;
 
-		this.type = 4;
-		this.stats = [];
-		this.action = p.byte;
-		this.packetLength = p.byte;
-		this.category = p.byte;
-		this.uid = p.dword;
+		this.action			= p.byte; // To ground, to container, etc...
+		this.packetLength	= p.byte;
+		this.category		= p.byte;
+		this.uid			= p.dword;
 
-		if (typeof game === 'undefined') {
-			var game = {me:{uid:666}};
-		}
+		this.type 			= 4; // Unit type (always item...)
+		this.stats			= [];
+		this.items			= {};
+		this.UnitId			= this.uid; // Just a shorthand
+		this.UnitType		= this.type; // Just a shorthand
+
+		if (typeof game === 'undefined') var game = {me:{uid:666}};
 
 		if (buffer[0] === 0x9D) {
 			this.ownerType = p.byte;
 			this.ownerUID = p.dword;
 		} else {
-			this.ownerType = 0;
-			this.ownerUID = game.me.uid;
+			this.ownerType = 0; // Its an private item, aka on us. We are an player
+			this.ownerUID = 0;
 		}
 
 		const flags = p.dword;
 		this.flags = {
 			None: (flags & ItemFlags.None) === ItemFlags.None,
 			Equipped: (flags & ItemFlags.Equipped) === ItemFlags.Equipped,
+			Cursor: (flags & ItemFlags.Cursor) === ItemFlags.Cursor,
 			InSocket: (flags & ItemFlags.InSocket) === ItemFlags.InSocket,
 			Identified: (flags & ItemFlags.Identified) === ItemFlags.Identified,
-			x20: (flags & ItemFlags.x20) === ItemFlags.x20,
+			Destroyed: (flags & ItemFlags.Destroyed) === ItemFlags.Destroyed,
 			SwitchedIn: (flags & ItemFlags.SwitchedIn) === ItemFlags.SwitchedIn,
 			SwitchedOut: (flags & ItemFlags.SwitchedOut) === ItemFlags.SwitchedOut,
 			Broken: (flags & ItemFlags.Broken) === ItemFlags.Broken,
 			Duplicate: (flags & ItemFlags.Duplicate) === ItemFlags.Duplicate,
 			Socketed: (flags & ItemFlags.Socketed) === ItemFlags.Socketed,
 			OnPet: (flags & ItemFlags.OnPet) === ItemFlags.OnPet,
-			x2000: (flags & ItemFlags.x2000) === ItemFlags.x2000,
-			NotInSocket: (flags & ItemFlags.NotInSocket) === ItemFlags.NotInSocket,
+			New: (flags & ItemFlags.New) === ItemFlags.New,
+			Disabled: (flags & ItemFlags.Disabled) === ItemFlags.Disabled,
 			Ear: (flags & ItemFlags.Ear) === ItemFlags.Ear,
 			StartItem: (flags & ItemFlags.StartItem) === ItemFlags.StartItem,
 			Simple: (flags & ItemFlags.Simple) === ItemFlags.Simple,
@@ -113,29 +135,30 @@ class Item extends require('./Unit') {
 			Personalized: (flags & ItemFlags.Personalized) === ItemFlags.Personalized,
 			Gamble: (flags & ItemFlags.Gamble) === ItemFlags.Gamble,
 			Runeword: (flags & ItemFlags.Runeword) === ItemFlags.Runeword,
-			x8000000: (flags & ItemFlags.x8000000) === ItemFlags.x8000000,
+			Magical: (flags & ItemFlags.Magical) === ItemFlags.Magical,
 		};
 
 		this.version = p.byte;
 		//p.bits(2);
 		this.destination = p.bits(5);
 
-		if (this.destination === ItemDestination.Ground) {
+		if (this.destination === ItemDestination.Ground) { // location == doug.Container && bodylocation == doug.Location
 			this.x = p.word;
 			this.y = p.word;
 			this.location = ItemLocation.Ground;
 		} else {
-			this.bodyLocation = p.bits(4);
+			this.bodylocation = p.bits(4);
 			this.x = p.bits(4);
 			this.y = p.bits(4);
 			this.location = p.bits(3);
 
-			if (this.destination === ItemActionType.AddToShop)
+			if (this.action === ItemActionType.AddToShop) {
 				this.location |= 0x100;
+			}
 		}
 
 		if (this.location === ItemLocation.Equipment) {
-			if (this.location === EquipmentLocation.NotApplicable) {
+			if (this.bodylocation === EquipmentLocation.NotApplicable) {
 				if (this.flags.InSocket) {
 					this.location = ItemLocation.Item;
 				} else {
@@ -148,6 +171,69 @@ class Item extends require('./Unit') {
 				this.y = -1;
 			}
 		}
+
+		switch (this.location) {
+			case ItemLocation.Equipment:
+			case ItemLocation.Inventory:
+			case ItemLocation.Cube:
+			case ItemLocation.Stash:
+			case ItemLocation.Item:
+				break;
+			default:
+				this.remove = true;
+				return;
+		}
+
+		switch (this.action) {
+			case ItemActionType.PutInContainer:
+			case ItemActionType.Equip:
+			case ItemActionType.IndirectlySwapBodyItem:
+			case ItemActionType.SwapBodyItem:
+			case ItemActionType.AddQuantity:
+			case ItemActionType.SwapInContainer:
+			case ItemActionType.AutoUnequip:
+			case ItemActionType.ItemInSocket:
+			case ItemActionType.UpdateStats:
+			case ItemActionType.WeaponSwitch:
+				break;
+			default:
+				this.remove = true;
+				return;
+		}
+
+		switch (this.destination) {
+			case ItemDestination.Container:
+			case ItemDestination.Equipment:
+			case ItemDestination.Item:
+				break;
+			case ItemDestination.Belt:
+			case ItemDestination.Ground:
+			case ItemDestination.Cursor:
+			default:
+				this.remove = true;
+				return;
+		}
+
+		if (this.ownerType === 4 && !game.itemCollector.items.hasOwnProperty(this.ownerUID)) {
+			this.remove = true;
+			return;
+		}
+		
+		if (!this.ownerUID && this.action !== ItemActionType.AddToShop) {
+			this.ownerUID = game.me.uid; // "it either has no owner or it belongs to you or it belongs to shop. 9c never belongs to other players"
+		}
+
+		if (this.ownerType === 0 && this.ownerUID !== game.me.uid) {
+			this.remove = true;
+			return;
+		}
+
+		if (this.ownerType === 1 && game.merc.uid && this.ownerUID !== game.merc.uid) {
+			this.remove = true;
+			return;
+		}
+
+		
 
 		if (this.flags.Ear) {
 			this.charClass = p.bits(3);
@@ -292,12 +378,27 @@ class Item extends require('./Unit') {
 			return;
 		}
 
-		var setMods = 0;
+		var skipFirstEnd = this.flags.Runeword,
+			setMods = 0,
+			stat;
+		 
 		if (this.quality === ItemQuality.Set)
 			setMods = p.bits(5);
-		while (this.readStat(br));
-		if (this.flags.Runeword) while (this.readStat(br));
-		while (setMods-- > 0) this.readStat(br);
+		
+		while (true) {
+			stat = this.readStat(br);
+
+			if (!stat) {
+				if (skipFirstEnd) {
+					skipFirstEnd = false;
+					continue;
+				}
+
+				break;
+			}
+		}
+		
+		//while (setMods-- > 0) this.readStat(br);
 	}
 
 	readStat(br) {
@@ -306,7 +407,7 @@ class Item extends require('./Unit') {
 		let statID = p.bits(9);
 
 		if (statID === 0x1FF || statID >= ItemStatIndex.length) {
-			br.pos -= 9;
+			//br.pos -= 9;
 			return false;
 		}
 
@@ -441,6 +542,8 @@ class Item extends require('./Unit') {
 	}
 
 	getColor() {
+		if (this.quality === ItemQuality.Set 	&& SetItem[this.setItem].invtransform) return ColorCodeIndex[SetItem[this.setItem].invtransform];		
+		if (this.quality === ItemQuality.Unique && Unique[this.uniqueItem].invtransform) return ColorCodeIndex[Unique[this.uniqueItem].invtransform];
 		if (!this.isColorAffected()) return 21; // 21 is "regular" aka no color, this is just so it works with ItemScreenshot lib, could be -1 instead
 		if (this.magicSuffixes) {
 			for (let i = 0; i < this.magicSuffixes.length; i++) {
