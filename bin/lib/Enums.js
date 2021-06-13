@@ -548,3 +548,34 @@ module.exports.MenuAction = { // S->C 0x77
 	CloseStash: 0x11,
 	OpenCube: 0x15,
 };
+
+module.exports.ChatType = { // S->C 0x26
+	Player: 0x01, // "USER: MSG"
+	Whisper: 0x02, // "USER whispers: MSG"
+	Print: 0x04, // "MSG"
+	WhisperTo: 0x06, // "You whispered to USER: MSG"
+	Scroll: 0x07, // "MSG" Actually forces a menu to come up with a scroll background where the message is visible. Colors work too.
+};
+
+module.exports.ChatColor = {
+	White: 0x00,
+	Red: 0x01,
+	Green: 0x02,
+	Blue: 0x03,
+	Unique: 0x04,
+	Grey: 0x05,
+	Black: 0x06,
+	Beige: 0x07,
+	Orange: 0x08,
+	Yellow: 0x09,
+	DarkerGreen: 0x0A,
+	Purple: 0x0B,
+	DarkGreen: 0x0C,
+	White_BlackOL: 0x0D,
+	Black_BlackOL: 0x0E,
+	Grey_BlackOL: 0x0F,
+	Grey_GreyOL: 0x10,
+	Green_OrangeOL: 0x11,
+	BrightWhite: 0x12,
+	BloodRed: 0x13,
+};

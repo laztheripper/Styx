@@ -1,6 +1,6 @@
 {
   "name": "Styx",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A man in the middle app for Diablo 2, similar to RedVex.\r Set it up so game.exe goes trough this socks5 server on localhost.",
   "main": "index.js",
   "scripts": {

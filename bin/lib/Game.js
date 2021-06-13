@@ -5,8 +5,9 @@ const ItemCollector = require('./ItemCollector');
 const Unit = require('./Unit');
 const Item = require('./ItemReader');
 const BufferHelper = require('./BufferHelper');
-const { MenuAction } = require('./Enums');
+const { MenuAction, ChatType, ChatColor } = require('./Enums');
 const { logPacket } = require('./Util');
+const Project = require('../../package.json');
 
 class Game {
 	constructor(diabloProxy) {
@@ -30,6 +31,29 @@ class Game {
 	destroy() {
 		// For all items we have, we call the destroy function if need
 		Object.keys(this).filter(key => this[key] && this[key].hasOwnProperty('destroy')).forEach(key => this[key].destroy());
+	}
+
+	spoofMessage(msg, color, type, nick) {
+		var i, buff, ind = 0;
+		
+		if (color === undefined) color = ChatColor.White;
+		if (type === undefined) type = ChatType.Print;
+		if (nick === undefined) nick = this.me.charname || 'Styx';
+
+		buff = Buffer.alloc(10 + nick.length + 1 + msg.length + 1);
+		buff.writeUInt8(0x26, ind++); // Chat msg
+		buff.writeUInt8(type, ind++); // Chat type
+		buff.writeUInt8(0x00, ind++); // Locale
+		buff.writeUInt8(0x02, ind++); // Unit type?
+		buff.writeUInt32LE(0x00, ind+=4); // Unit gid?
+		buff.writeUInt8(color, ind++); // Chat color
+		buff.writeUInt8(0x04, ind++); // Subtype
+		for (i = 0; i < nick.length; i++) buff.writeUInt8(nick[i].charCodeAt(0), ind++);
+		buff.writeUInt8(0x00, ind++);
+		for (i = 0; i < msg.length; i++) buff.writeUInt8(msg[i].charCodeAt(0), ind++);
+		buff.writeUInt8(0x00, ind++);
+
+		this.diabloProxy.client.write(buff); // Send
 	}
 
 	collect() {
@@ -57,6 +81,10 @@ class Game {
 			}
 		});
 
+		this.gameServer.on(0x26, ({packetData}) => {
+			// Nada
+		});
+
 		this.gameServer.on(0x03, ({packetData}) => {
 			this.me.act = packetData.Act + 1;
 		});
@@ -74,6 +102,7 @@ class Game {
 		this.gameServer.once(0x5A, ({packetData}) => {
 			this.me.charname = BufferHelper.getCString(packetData.raw, 16, 8);
 			this.me.account = BufferHelper.getCString(packetData.raw, 16, 24);
+			this.spoofMessage(Project.name + ' ' + Project.version, ChatColor.BrightWhite, ChatType.Print);
 			console.log('0x5A', this.me); // Last one received related to `me` 
 		});
 
