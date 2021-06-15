@@ -69,8 +69,9 @@ class DiabloProxy {
 		
 		this.hooks = {client: [], server: []};
 
-		client.pipe(server); // For now
-		//client.on('data', dataHandler(server, this.hooks.client));
+		//client.pipe(server); // For now
+		//server.pipe(client);
+		client.on('data', dataHandler(server, this.hooks.client));
 		server.on('data', dataHandler(client, this.hooks.server));
 
 		this.ip = ip;
@@ -83,6 +84,11 @@ class DiabloProxy {
 		this.game = new Game(this);
 
 		DiabloProxy.instances.push(this);
+		client.on('close', () => this.destroy());
+	}
+
+	destroy() {
+		DiabloProxy.instances.splice(DiabloProxy.instances.indexOf(this), 1);
 	}
 
 	static instances = [];

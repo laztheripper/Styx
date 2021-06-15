@@ -13,7 +13,7 @@ class Game {
 	constructor(diabloProxy) {
 		this.diabloProxy = diabloProxy;
 		this.gameServer = new GameServer(this);
-		//this.gameClient = new GameClient(this);
+		this.gameClient = new GameClient(this);
 
 		this.unitCollector = new UnitCollector(this);
 		this.itemCollector = new ItemCollector(this);
@@ -61,7 +61,7 @@ class Game {
 			this.merc.uid = packetData.MercId;
 			this.merc.type = 1;
 			this.unitCollector.collection[1][this.merc.uid] = this.merc;
-			console.log('0x81', this.merc);
+			//console.log('0x81', this.merc);
 		});
 
 		this.gameServer.on(0x77, ({packetData}) => {
@@ -99,7 +99,7 @@ class Game {
 			this.me.charname = BufferHelper.getCString(packetData.raw, 16, 8);
 			this.me.account = BufferHelper.getCString(packetData.raw, 16, 24);
 			this.spoofMessage(Project.name + ' ' + Project.version, ChatColor.BrightWhite, ChatType.Print);
-			console.log('0x5A', this.me); // Last one received related to `me` 
+			//console.log('0x5A', this.me); // Last one received related to `me` 
 		});
 
 		this.gameServer.once(0x01, ({packetData}) => {

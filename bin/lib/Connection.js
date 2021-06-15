@@ -15,23 +15,25 @@ const net = require('net');
 class Connection {
 	constructor(socket, settings = {users: [], options: {allowNoAuth: false, listen: 0x50C4, proxy: require('./../SimpleProxy')}}) {
 		this.socket = socket;
+		this.remote = null;
 		this.settings = settings;
+		this.proxy = null;
 		socket.on('error', e => e);
 		socket.once('data', data => this.handshakeInit(data));
-		Connection.instances.push(this);
+		Connection.instances.push(this); // Somehow I don't need to destroy these after I'm done with them?
 	}
 
 	connect(ipAddr, port, connectBuffer) {
-		console.log(ipAddr + ':' + port);
+		//console.log(ipAddr + ':' + port);
 
-		const remote = net.connect(port, ipAddr, () => {
+		this.remote = net.connect(port, ipAddr, () => {
 			connectBuffer.writeUInt8(0x00, 1); // Success code
 			this.socket.write(connectBuffer);
 			this.destroy(false); // Dont close socket ;)
 			
 			if ([6112,6113,4000].includes(port)) {
 				console.log(ipAddr + ':' + port);
-				new this.settings.options.proxy(this.socket, remote, ipAddr, port);
+				this.proxy = new this.settings.options.proxy(this.socket, this.remote, ipAddr, port);
 				return;
 			}
 
@@ -39,32 +41,32 @@ class Connection {
 			var destHost = 'HOST';
 
 			this.socket.once('data', data1 => {
-				remote.write(data1);
+				this.remote.write(data1);
 
 				try {[destHost, destPort] = BufferHelper.getString(data1, data1.length, 0).split(' ')[1].split(':')} catch (e) {}
 
 				if (data1.length == 3 && data1.readUInt8(0) === 0x05) {
 
-					remote.once('data', data2 => {
+					this.remote.once('data', data2 => {
 						this.socket.write(data2);
 	
-						remote.once('data', data4 => {
+						this.remote.once('data', data4 => {
 							this.socket.write(data4);
 
-							remote.once('data', data6 => {
+							this.remote.once('data', data6 => {
 								this.socket.write(data6);
 
 								console.log(destPort ? destHost + ':' + destPort : ipAddr + ':' + port); // direct : proxychain
-								new this.settings.options.proxy(this.socket, remote, destHost || ipAddr, parseInt(destPort) || port);
+								this.proxy = new this.settings.options.proxy(this.socket, this.remote, destHost || ipAddr, parseInt(destPort) || port);
 							});
 						});
 					});
 
 					this.socket.once('data', data3 => {
-						remote.write(data3);
+						this.remote.write(data3);
 
 						this.socket.once('data', data5 => {
-							remote.write(data5);
+							this.remote.write(data5);
 
 							if (data5.length >= 10 && data5[0] === 0x05 && data5[2] === 0x00) { // All of this block is just to get dest IP:PORT. lol
 								var offset = 3;
@@ -93,20 +95,20 @@ class Connection {
 				}
 
 				if (destPort) {
-					remote.once('data', data7 => {
+					this.remote.once('data', data7 => {
 						this.socket.write(data7);
 
 						// Validate confirmation from proxy
 
 						console.log(destPort ? destHost + ':' + destPort : ipAddr + ':' + port); // direct : proxychain
-						new this.settings.options.proxy(this.socket, remote, destHost || ipAddr, parseInt(destPort) || port);
+						this.proxy = new this.settings.options.proxy(this.socket, this.remote, destHost || ipAddr, parseInt(destPort) || port);
 					});
 
 					return;
 				}
 
 				console.log(destPort ? destHost + ':' + destPort : ipAddr + ':' + port); // direct : proxychain
-				new this.settings.options.proxy(this.socket, remote, destHost || ipAddr, parseInt(destPort) || port);
+				this.proxy = new this.settings.options.proxy(this.socket, this.remote, destHost || ipAddr, parseInt(destPort) || port);
 			});
 		}).on('error', err => {
 			connectBuffer.writeUInt8(!!err | 0, 1); // Success code
@@ -217,7 +219,8 @@ class Connection {
 
 	destroy(socketDestroy = true) {
 		Connection.instances.splice(Connection.instances.indexOf(this), 1);
-		socketDestroy && this.socket.destroy();
+		socketDestroy && this.socket && this.socket.destroy()
+		socketDestroy && this.remote && this.remote.destroy();
 	}
 
 	static instances = [];
