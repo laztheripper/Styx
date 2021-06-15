@@ -46,7 +46,6 @@ class ItemCollector {
 	clearOwner(owner) { // remove all items of unit and ofc socketed items
 		for (let uid in owner.items) {
 			this.remove(uid);
-			console.log('removed', uid);
 		}
 	}
 

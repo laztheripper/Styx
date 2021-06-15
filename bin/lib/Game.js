@@ -11,21 +11,17 @@ const Project = require('../../package.json');
 
 class Game {
 	constructor(diabloProxy) {
-		// ToDo: Hook myself upon the realm server proxy
 		this.diabloProxy = diabloProxy;
 		this.gameServer = new GameServer(this);
 		//this.gameClient = new GameClient(this);
 
-		// Collect units
 		this.unitCollector = new UnitCollector(this);
-
-		// Collect items (is also an unit)
 		this.itemCollector = new ItemCollector(this);
 
 		this.me = new Unit();
 		this.merc = new Unit();
 		this.collect(); // Do this in another function to prevent memory leaks
-		//delete this.collect; // Doesnt need to be called again
+		delete this.collect; // Doesnt need to be called again
 	}
 
 	destroy() {
@@ -130,7 +126,6 @@ class Game {
 			this.itemCollector.newItem(item);
 		});
 
-		// Upon game termination
 		this.gameServer.once(0xB0, _ => {
 			this.destroy();
 			console.log('Game exit');

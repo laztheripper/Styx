@@ -42,6 +42,7 @@ var items = [
   //'9d 06 21 05 cb be 1d 4e 00 46 8b fd dd 11 00 82 00 65 84 08 30 37 47 07 82 80 40 41 61 0d 89 fc 07'
 ];
 
+
 for (let i = 0; i < items.length; i++) {
   var s = Buffer.from(items[i].replace(/ /g, ''), 'hex');
   var n = Buffer.alloc(s.length);
@@ -51,3 +52,5 @@ for (let i = 0; i < items.length; i++) {
   let it = new Item(items[i]);
   console.log(it);
 }
+
+
