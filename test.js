@@ -1,5 +1,5 @@
 const BufferHelper = require('./bin/lib/BufferHelper');
-const Item = require('./bin/lib/ItemReader');
+const Item = require('./bin/lib/Item');
 const BitReader = require('./bin/lib/BitReader');
 var {BaseCodeIndex} = require('./bin/lib/Tables');
 
@@ -50,7 +50,13 @@ for (let i = 0; i < items.length; i++) {
   items[i] = n;
 
   let it = new Item(items[i]);
-  console.log(it);
+  //console.log(it);
 }
 
 
+function penis(a, b) {
+  console.log(this);
+  console.log(a, b);
+}
+
+penis.apply(1, [2, 3]);

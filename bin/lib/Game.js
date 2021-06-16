@@ -3,7 +3,6 @@ const GameClient = require('./GameClient');
 const UnitCollector = require('./UnitCollector');
 const ItemCollector = require('./ItemCollector');
 const Unit = require('./Unit');
-const Item = require('./ItemReader');
 const BufferHelper = require('./BufferHelper');
 const { MenuAction, ChatType, ChatColor } = require('./Enums');
 const { logPacket } = require('./Util');
@@ -11,7 +10,7 @@ const Project = require('../../package.json');
 
 class Game {
 	constructor(diabloProxy) {
-		this.diabloProxy = diabloProxy;
+		this.diabloProxy = diabloProxy; // extends Events so every packet handled by the hook can be emitted to this.diabloProxy
 		this.gameServer = new GameServer(this);
 		this.gameClient = new GameClient(this);
 
@@ -112,18 +111,6 @@ class Game {
 			this.me.hardcore	= this.hardcore;
 			this.me.expansion	= this.expansion;
 			this.me.ladder		= this.ladder;
-		});
-
-		this.gameServer.on(0x9C, ({packetData}) => {
-			const item = Item.fromPacket(packetData.raw, this);
-			if (!item) return;
-			this.itemCollector.newItem(item);
-		});
-
-		this.gameServer.on(0x9D, ({packetData}) => {
-			const item = Item.fromPacket(packetData.raw, this);
-			if (!item) return;
-			this.itemCollector.newItem(item);
 		});
 
 		this.gameServer.once(0xB0, _ => {

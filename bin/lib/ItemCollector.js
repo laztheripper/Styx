@@ -4,9 +4,27 @@ class ItemCollector {
 	constructor(game) {
 		this.game = game;
 		this.items = {};
+		this.collect();
+		delete this.collect;
+	}
+
+	collect() {
+		this.game.gameServer.on(0x9C, ({packetData}) => {
+			const item = Item.fromPacket(packetData.raw, this.game);
+			if (!item) return;
+			this.newItem(item);
+		});
+
+		this.game.gameServer.on(0x9D, ({packetData}) => {
+			const item = Item.fromPacket(packetData.raw, this.game);
+			if (!item) return;
+			this.newItem(item);
+		});
 	}
 
 	newItem(item) {
+		ItemCollector.hooks.forEach(hook => typeof hook === 'function' && hook.apply(this.game, [item]));
+
 		if (item.remove) {
 			this.remove(item.uid);
 			return;
@@ -55,6 +73,8 @@ class ItemCollector {
 		this.merc.items = {};
 		this.game = null;
 	}
+
+	static hooks = [];
 }
 
 module.exports = ItemCollector;

@@ -1,4 +1,4 @@
-const GameServer = require('./../lib/GameServer');
+const GameServer = require('../lib/GameServer');
 
 const readableChars = [];
 for (let i = 32; i < 128; i++) readableChars.push(i);
@@ -35,7 +35,7 @@ GameServer.hooks.push(
 		const fs = require('fs');
 		const logfile = {server: this.diabloProxy.scfile, client: this.diabloProxy.csfile}['server'];
 
-		//console.log('Writing to log file ->' + logfile);
+		console.log('Writing to log file ->' + logfile);
 		// fs.writeFileSync(logfile,buffer,{flag: 'a'});
 	}
 );

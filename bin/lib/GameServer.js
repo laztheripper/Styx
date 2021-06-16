@@ -17,8 +17,6 @@ class GameServer extends require('events') {
 				this.lastBuff = false;
 			}
 
-			//logPacket('Server->Client', buffer);
-
 			while (buffer.length) {
 				const size = GameServer.getPacketSize(buffer, buffer.length);
 
@@ -45,7 +43,7 @@ class GameServer extends require('events') {
 
 				this.emit(null, {packetData, game});
 				this.emit(packetBuffer[0], {packetData, game});
-				GameServer.hooks.forEach(hook => typeof hook === 'function' && hook.apply(this.game, [{raw: packetBuffer, ...packetData}]));
+				GameServer.hooks.forEach(hook => typeof hook === 'function' && hook.apply(this.game, [{raw: packetBuffer, ...packetData}])); // Not used cause nothing is pushed to the gameserver hooks.
 				if (packetBuffer[0] === 0xB0) break;
 			}
 		});

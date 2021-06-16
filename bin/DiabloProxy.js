@@ -59,11 +59,11 @@ class DiabloProxy {
 
 		const dataHandler = (to, hooks) => buffer => {
 			try {
-				hooks.map(proxy => proxy.call(this, buffer));
+				hooks.map(hook => hook.call(this, buffer)); // For every hook in hooks (of client or server), run the hook
 			} catch(e) {
-				console.log(e);
+				console.log(e); // On running hook handle error
 			} finally {
-				to.write(buffer);
+				to.write(buffer); // Finally write from source to target
 			}
 		}
 		
@@ -71,7 +71,7 @@ class DiabloProxy {
 
 		//client.pipe(server); // For now
 		//server.pipe(client);
-		client.on('data', dataHandler(server, this.hooks.client));
+		client.on('data', dataHandler(server, this.hooks.client)); // On data from client, pass server and client hooks to datahandler
 		server.on('data', dataHandler(client, this.hooks.server));
 
 		this.ip = ip;
