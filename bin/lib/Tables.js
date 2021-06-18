@@ -48,22 +48,24 @@ const Color 		= readTable('colors.txt');
 const Runeword		= readTable('Runes.txt');
 const Unique		= readTable('UniqueItems.txt');
 
-const BaseCodeIndex	= {}; // Base code: row index
-const ItemStatIndex	= {}; // Stat: row index
-const TypeCodeIndex	= {}; // Item type code: row index 
-const SetItemIndex	= {}; // Set item name: row index
-const SetCodeIndex	= {}; // TODO List of set baseitem codes that are only present once (distinct): row index
-const ColorCodeIndex= {}; // Color code: row index
-const RunewordIndex	= {}; // Runeword Name (ie Runeword96): row index
+const BaseCodeIndex		= {}; // Base code: row index
+const ItemStatIndex		= {}; // Stat: row index
+const TypeCodeIndex		= {}; // Item type code: row index 
+const SetItemIndex		= {}; // Set item name: row index
+const ColorCodeIndex	= {}; // Color code: row index
+const RunewordIndex		= {}; // Runeword Name (ie Runeword96): row index
+const UnidUniqueIndex	= {}; // Keys are basetypes, values are Unique row index or false when not knowable
+const UnidSetIndex		= {}; // Keys are basetypes, values are SetItem row index or false when not knowable
 
 { // Populate dicts
-	for (let i = 0; i < BaseItem.length; i++) BaseCodeIndex[BaseItem[i].code] = i;
-	for (let i = 0; i < ItemStat.length; i++) ItemStatIndex[ItemStat[i].stat] = i;
-	for (let i = 0; i < ItemType.length; i++) TypeCodeIndex[ItemType[i].code] = i;
-	for (let i = 0; i < SetItem.length;  i++) SetItemIndex[SetItem[i].index]  = i;
-	for (let i = 0; i < Color.length;	 i++) ColorCodeIndex[Color[i].code]   = i;
-	for (let i = 0; i < Runeword.length; i++) RunewordIndex[parseInt(Runeword[i].name.replace(/\D/g, ''))] = i;
-	for (let i = 0; i < ItemType.length; i++) {
+	var i;
+	for (i = 0; i < BaseItem.length; i++) BaseCodeIndex[BaseItem[i].code] = i;
+	for (i = 0; i < ItemStat.length; i++) ItemStatIndex[ItemStat[i].stat] = i;
+	for (i = 0; i < ItemType.length; i++) TypeCodeIndex[ItemType[i].code] = i;
+	for (i = 0; i < SetItem.length;  i++) SetItemIndex[SetItem[i].index]  = i;
+	for (i = 0; i < Color.length;	 i++) ColorCodeIndex[Color[i].code]   = i;
+	for (i = 0; i < Runeword.length; i++) RunewordIndex[parseInt(Runeword[i].name.replace(/\D/g, ''))] = i;
+	for (i = 0; i < ItemType.length; i++) {
 		if (!ItemType[i].code) {
 			ItemType[i].types = [];
 			continue;
@@ -82,6 +84,23 @@ const RunewordIndex	= {}; // Runeword Name (ie Runeword96): row index
 		}
 
 		ItemType[i].types = [...new Set(types)];
+	}
+	UnidUniqueIndex['jew'] = 392;
+	for (i = 0; i < Unique.length; i++) {
+		if (!Unique[i].enabled || !Unique[i].code) continue;
+		if (UnidUniqueIndex.hasOwnProperty(Unique[i].code)) {
+			UnidUniqueIndex[Unique[i].code] = false;
+			continue;
+		}
+		UnidUniqueIndex[Unique[i].code] = i;
+	}
+	for (i = 0; i < SetItem.length; i++) {
+		if (!SetItem[i].item) continue;
+		if (UnidSetIndex.hasOwnProperty(SetItem[i].item)) {
+			UnidSetIndex[SetItem[i].item] = false;
+			continue;
+		}
+		UnidSetIndex[SetItem[i].item] = i;
 	}
 }
 
@@ -103,6 +122,7 @@ module.exports.BaseCodeIndex	= BaseCodeIndex;
 module.exports.TypeCodeIndex	= TypeCodeIndex;
 module.exports.ItemStatIndex	= ItemStatIndex;
 module.exports.SetItemIndex		= SetItemIndex;
-module.exports.SetCodeIndex		= SetCodeIndex;
 module.exports.ColorCodeIndex	= ColorCodeIndex;
 module.exports.RunewordIndex	= RunewordIndex;
+module.exports.UnidUniqueIndex	= UnidUniqueIndex;
+module.exports.UnidSetIndex		= UnidSetIndex;

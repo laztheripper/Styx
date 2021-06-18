@@ -4,30 +4,29 @@
  */
 const Game = require('./lib/Game');
 const fs = require('fs');
+const Config = require('./Config');
 
 /** @param {string} dirPath
  * @param {string} relative
  */
 const addDirectory = function (dirPath, relative) {
 	const checkItem = item => {
-
-		// Get stats of the file
 		fs.stat(dirPath + '/' + item, (err, stats) => {
 			if (!err) {
 				if (stats.isDirectory()) {
-					// If it is a directory, do this recursively
-					return addDirectory(dirPath + '/' + item, relative + '/' + item);
+					//return addDirectory(dirPath + '/' + item, relative + '/' + item); // Don't do that for now. Plugins will load their own dependencies in folders probably.
 				} else if (item.endsWith('.js')) {
-					// if its just a file?
-					loadPlugin('./' + relative + '/' + item);
+					let name = item.split('.js')[0];
+					if (Config.hasOwnProperty(name) && Config[name].enable) {
+						loadPlugin('./' + relative + '/' + item);
+						console.log('Loaded', name);
+					}
 				}
 			}
 		})
 	};
 
-	// get async a list of all files in the directory
 	fs.readdir(dirPath, (err, items) => {
-		// For all the files found in this directory
 		items.forEach(checkItem);
 	});
 };
@@ -69,9 +68,9 @@ class DiabloProxy {
 		
 		this.hooks = {client: [], server: []};
 
-		//client.pipe(server); // For now
+		client.pipe(server); // For now
 		//server.pipe(client);
-		client.on('data', dataHandler(server, this.hooks.client)); // On data from client, pass server and client hooks to datahandler
+		//client.on('data', dataHandler(server, this.hooks.client)); // On data from client, pass server and client hooks to datahandler
 		server.on('data', dataHandler(client, this.hooks.server));
 
 		this.ip = ip;

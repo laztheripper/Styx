@@ -20,5 +20,8 @@
   "homepage": "https://github.com/laztheripper/socks5-diablo#readme",
   "devDependencies": {
     "electron": "^11.3.0"
+  },
+  "dependencies": {
+    "ws": "^7.5.0"
   }
 }

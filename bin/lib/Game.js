@@ -97,7 +97,6 @@ class Game {
 		this.gameServer.once(0x5A, ({packetData}) => {
 			this.me.charname = BufferHelper.getCString(packetData.raw, 16, 8);
 			this.me.account = BufferHelper.getCString(packetData.raw, 16, 24);
-			this.spoofMessage(Project.name + ' ' + Project.version, ChatColor.BrightWhite, ChatType.Print);
 			//console.log('0x5A', this.me); // Last one received related to `me` 
 		});
 
@@ -118,6 +117,8 @@ class Game {
 			console.log('Game exit');
 			console.log(this.itemCollector.items);
 		});
+
+		this.spoofMessage(Project.name + ' ' + Project.version, ChatColor.BrightWhite, ChatType.Print);
 	}
 
 }

@@ -1,12 +1,17 @@
 /**
- * @description Config file to be written
+ * @description Config file for plugins
  */
 
 module.exports = {
-	users: [], // Dont use any auth for now. Can be changed if you like / want
-	options: {
-		allowNoAuth: true, // If true, allow no auth
-		listen: 0x50C4, // "sock" in hex, or whatever port you prefer
-		proxy: require('./DiabloProxy'),
+    apiKey: '9ce7d828-5ed4-41e3-a14c-7bd934898735',
+    apiUrl: 'dev.harrogath.com/api',
+
+	DropCounter: {
+		enable: true,
+		print: true,
+        runes: true,
+	},
+	GameLogger: {
+		enable: false,
 	}
 };

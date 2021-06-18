@@ -557,7 +557,7 @@ module.exports.ChatType = { // S->C 0x26
 	Scroll: 0x07, // "MSG" Actually forces a menu to come up with a scroll background where the message is visible. Colors work too.
 };
 
-module.exports.ChatColor = {
+module.exports.ChatColor = { // Used in S->C 0x26
 	White: 0x00,
 	Red: 0x01,
 	Green: 0x02,
@@ -579,3 +579,31 @@ module.exports.ChatColor = {
 	BrightWhite: 0x12,
 	BloodRed: 0x13,
 };
+
+module.exports.ChatColorCode = {
+	White: 'ÿc0',
+	Red: 'ÿc1',
+	Green: 'ÿc2',
+	Blue: 'ÿc3',
+	Unique: 'ÿc4',
+	Grey: 'ÿc5',
+	Black: 'ÿc6',
+	Beige: 'ÿc7',
+	Orange: 'ÿc8',
+	Yellow: 'ÿc9',
+	DarkerGreen: 'ÿc:',
+	Purple: 'ÿc;',
+	DarkGreen: 'ÿc<',
+};
+
+module.exports.QualityColorCode = [ // Chat colors by item quality
+	'ÿc0', // 0 Default: white
+	'ÿc0', // 1 Lowquality: white
+	'ÿc0', // 2 Normal: white
+	'ÿc0', // 3 Superior: white
+	'ÿc3', // 4 Magic: blue
+	'ÿc2', // 5 Set: green
+	'ÿc9', // 6 Rare: yellow
+	'ÿc4', // 7 Unique: unique
+	'ÿc8', // 8 Crafted: orange
+];

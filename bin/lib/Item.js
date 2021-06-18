@@ -28,9 +28,10 @@ const {
 	TypeCodeIndex,
 	ItemStatIndex,
 	SetItemIndex,
-	SetCodeIndex,
 	ColorCodeIndex,
 	RunewordIndex,
+	UnidSetIndex,
+	UnidUniqueIndex,
 } = require('./Tables');
 
 class ItemAffix {
@@ -77,8 +78,6 @@ class Item extends require('./Unit') {
 			return false;
 		}
 
-		console.log(it.code, it.uid, it.ownerType, it.ownerUID);
-		//console.log(it);
 		return it;
 	}
 
@@ -172,6 +171,19 @@ class Item extends require('./Unit') {
 			}
 		}
 
+		if (this.flags.Ear) {
+			this.charClass = p.bits(3);
+			this.level = p.bits(7);
+			this.name = p.string();
+			this.code = 'ear';
+			this.classid = 556;
+			return;
+		}
+
+		this.code = p.string(3);
+		p.bits(8);
+		this.classid = BaseCodeIndex[this.code];
+
 		switch (this.location) {
 			case ItemLocation.Equipment:
 			case ItemLocation.Inventory:
@@ -181,7 +193,6 @@ class Item extends require('./Unit') {
 				break;
 			default:
 				this.remove = true;
-				return;
 		}
 
 		switch (this.action) {
@@ -198,7 +209,6 @@ class Item extends require('./Unit') {
 				break;
 			default:
 				this.remove = true;
-				return;
 		}
 
 		switch (this.destination) {
@@ -211,12 +221,10 @@ class Item extends require('./Unit') {
 			case ItemDestination.Cursor:
 			default:
 				this.remove = true;
-				return;
 		}
 
 		if (this.ownerType === 4 && !game.itemCollector.items.hasOwnProperty(this.ownerUID)) {
 			this.remove = true;
-			return;
 		}
 		
 		if (!this.ownerUID && this.action !== ItemActionType.AddToShop) {
@@ -225,33 +233,17 @@ class Item extends require('./Unit') {
 
 		if (this.ownerType === 0 && this.ownerUID !== game.me.uid) {
 			this.remove = true;
-			return;
 		}
 
 		if (this.ownerType === 1 && game.merc.uid && this.ownerUID !== game.merc.uid) {
 			this.remove = true;
-			return;
 		}
 
-		
-
-		if (this.flags.Ear) {
-			this.charClass = p.bits(3);
-			this.level = p.bits(7);
-			this.name = p.string();
-			this.code = 'ear';
-			this.classid = 556;
-			return;
-		}
-
-		this.code = p.string(3);
-		p.bits(8);
-		this.classid = BaseCodeIndex[this.code];
 		const baseItem = BaseItem[this.classid];
+		if (baseItem.quest) this.quest = true;
 
 		if (this.classid === 523) { // Gold
 			this.stats.Quantity = p.bits(p.bit ? 32 : 12);
-			return;
 		}
 		
 		const itemTypeIndex = TypeCodeIndex[baseItem.type];
@@ -273,6 +265,7 @@ class Item extends require('./Unit') {
 
 		this.level = p.bits(7); // illvl
 		this.quality = p.bits(4); // quality
+		if (this.remove) return;
 		if (p.boolean) this.graphic = p.bits(3); // Graphic : 1 : 3+1
 		if (p.boolean) this.autoMod = p.bits(11); // Automod : 1 : 11+1
 
@@ -308,8 +301,8 @@ class Item extends require('./Unit') {
 					break;
 			}
 		} else {
-			//if (this.quality === ItemQuality.Set) this.setItem = SetCodeIndex[this.code];
-			//if (this.quality === ItemQuality.Unique) this.uniqueItem = UniqueCodeIndex[this.code];
+			if (this.quality === ItemQuality.Set && UnidSetIndex[this.code]) this.setItem = UnidSetIndex[this.code];
+			if (this.quality === ItemQuality.Unique && UnidUniqueIndex[this.code]) this.uniqueItem = UnidUniqueIndex[this.code];
 		}
 
 		if (this.quality === ItemQuality.Rare || this.quality === ItemQuality.Crafted) {
@@ -542,7 +535,9 @@ class Item extends require('./Unit') {
 	}
 
 	getColor() {
-		if (this.quality === ItemQuality.Set 	&& SetItem[this.setItem].invtransform) return ColorCodeIndex[SetItem[this.setItem].invtransform];		
+		if (!this.flags.Identified) return 21;
+		if (this.quest) return 21;
+		if (this.quality === ItemQuality.Set && SetItem[this.setItem].invtransform) return ColorCodeIndex[SetItem[this.setItem].invtransform];		
 		if (this.quality === ItemQuality.Unique && Unique[this.uniqueItem].invtransform) return ColorCodeIndex[Unique[this.uniqueItem].invtransform];
 		if (!this.isColorAffected()) return 21; // 21 is "regular" aka no color, this is just so it works with ItemScreenshot lib, could be -1 instead
 		if (this.magicSuffixes) {

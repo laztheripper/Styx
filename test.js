@@ -53,10 +53,6 @@ for (let i = 0; i < items.length; i++) {
   //console.log(it);
 }
 
+const WS = require('./bin/lib/ws');
 
-function penis(a, b) {
-  console.log(this);
-  console.log(a, b);
-}
-
-penis.apply(1, [2, 3]);
+const wss = new WS('dev.travincal.com/ws');

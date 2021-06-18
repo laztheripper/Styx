@@ -5,7 +5,7 @@
 
 const net = require('net');
 const Connection = require('./Connection');
-const {users = [], options = {allowNoAuth: false, listen: 0x50C4}} = require('./../Config.js');
+const {users = [], options = {allowNoAuth: false, listen: 0x50C4}} = require('../ServerConfig.js');
 
 net.createServer(socket => new Connection(socket, {users, options})).listen(options.listen);
 
