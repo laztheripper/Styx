@@ -31,6 +31,20 @@ class BufferHelper {
 
 		return str;
 	}
+
+	static padByte(str) {
+		const p = "00";
+		return p.substring(0, p.length - str.length) + str;
+	}
+
+	static getByteStr(buffer, from=0, to) {
+		var i, str = '';
+		if (to === undefined) to = buffer.length;
+		for (i = from; i < to; i++) {
+			str += BufferHelper.padByte(buffer[i].toString(16)) + ' ';
+		}
+		return str.slice(0, -1);
+	}
 }
 
 module.exports = BufferHelper;

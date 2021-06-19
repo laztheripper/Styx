@@ -39,7 +39,6 @@ class SkillBonusStat extends Stat {
 		this.skill = skill;
 		this.val = val;
 	}
-
 }
 
 class ChargedSkillStat extends Stat {

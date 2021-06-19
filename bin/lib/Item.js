@@ -6,8 +6,8 @@
  */
 
 const BitReader = require('./BitReader');
+const BufferHelper = require('./BufferHelper');
 const {ItemFlags, ItemLocation, EquipmentLocation, ItemActionType, ItemQuality, ItemDestination, ItemAffixType} = require('./Enums');
-const ItemCollector = require('./ItemCollector');
 const {ReanimateStat, ElementalSkillsBonusStat, ClassSkillsBonusStat, AuraStat, SkillBonusStat, ChargedSkillStat, SkillOnEventStat, SkillTabBonusStat, PerLevelStat, DamageRangeStat, ColdDamageStat, PoisonDamageStat, ReplenishStat, SignedStat, UnsignedStat,} = require('./StatTypes');
 const {
 	// Tables
@@ -18,6 +18,7 @@ const {
 	RareSuffix,
 	MagicPrefix,
 	MagicSuffix,
+	AutoAffix,
 	SetItem,
 	Color,
 	Runeword,
@@ -111,6 +112,7 @@ class Item extends require('./Unit') {
 		}
 
 		const flags = p.dword;
+		this.iflags = flags;
 		this.flags = {
 			None: (flags & ItemFlags.None) === ItemFlags.None,
 			Equipped: (flags & ItemFlags.Equipped) === ItemFlags.Equipped,
@@ -173,7 +175,7 @@ class Item extends require('./Unit') {
 
 		if (this.flags.Ear) {
 			this.charClass = p.bits(3);
-			this.level = p.bits(7);
+			this.ilvl = p.bits(7);
 			this.name = p.string();
 			this.code = 'ear';
 			this.classid = 556;
@@ -183,6 +185,7 @@ class Item extends require('./Unit') {
 		this.code = p.string(3);
 		p.bits(8);
 		this.classid = BaseCodeIndex[this.code];
+		this.tier = this.getTier();
 
 		switch (this.location) {
 			case ItemLocation.Equipment:
@@ -243,11 +246,13 @@ class Item extends require('./Unit') {
 		if (baseItem.quest) this.quest = true;
 
 		if (this.classid === 523) { // Gold
-			this.stats.Quantity = p.bits(p.bit ? 32 : 12);
+			//this.stats.Quantity = p.bits(p.bit ? 32 : 12);
+			this.addStat(new SignedStat(ItemStat[ItemStatIndex.quantity], p.bits(p.bit ? 32 : 12)));
 		}
 		
 		const itemTypeIndex = TypeCodeIndex[baseItem.type];
 		const itemType = ItemType[itemTypeIndex];
+		this.itype = itemTypeIndex; // Row id from types table
 
 		if (this.hasType('blun')) {
 			this.addStat(new SignedStat(ItemStat[ItemStatIndex.itemundeaddamagepercent], 50));
@@ -263,7 +268,7 @@ class Item extends require('./Unit') {
 			return;
 		}
 
-		this.level = p.bits(7); // illvl
+		this.ilvl = p.bits(7); // illvl
 		this.quality = p.bits(4); // quality
 		if (this.remove) return;
 		if (p.boolean) this.graphic = p.bits(3); // Graphic : 1 : 3+1
@@ -273,36 +278,38 @@ class Item extends require('./Unit') {
 			switch (this.quality) {
 				case ItemQuality.Inferior:
 					this.prefix = new ItemAffix(ItemAffixType.InferiorPrefix, p.bits(3)); // affix.type === what kind of inferior item ie: 0=crude, 1=cracked, 2=...
+					this.nameprefix = this.prefix.index; // Row of lowqualityitems.txt
 					break;
 
 				case ItemQuality.Superior:
 					this.prefix = new ItemAffix(ItemAffixType.SuperiorPrefix, p.bits(3));
+					this.nameprefix = this.prefix.index; // Row of qualityitems.txt (row doesn't matter tho, they're all "superior")
 					break;
 
 				case ItemQuality.Magic:
 					let prefixIndex = p.bits(11) - 1;
-					if (prefixIndex >= 0) this.prefix = new ItemAffix(ItemAffixType.MagicPrefix, prefixIndex);
+					if (prefixIndex >= 0) this.prefix = new ItemAffix(ItemAffixType.MagicPrefix, prefixIndex); // Row index of MagicPrefix.txt
 					let suffixIndex = p.bits(11) - 1;
-					if (suffixIndex >= 0) this.suffix = new ItemAffix(ItemAffixType.MagicSuffix, suffixIndex);
+					if (suffixIndex >= 0) this.suffix = new ItemAffix(ItemAffixType.MagicSuffix, suffixIndex); // Row index of MagicSuffix.txt
 					break;
 
 				case ItemQuality.Rare:
 				case ItemQuality.Crafted:
-					this.prefix = new ItemAffix(ItemAffixType.Rare, p.bits(8) - 1);
-					this.suffix = new ItemAffix(ItemAffixType.Rare, p.bits(8) - 1);
+					this.prefix = new ItemAffix(ItemAffixType.Rare, p.bits(8) - 1); // Row index of RarePrefix.txt
+					this.suffix = new ItemAffix(ItemAffixType.Rare, p.bits(8) - 1); // Row index of RareSuffix.txt
 					break;
 
 				case ItemQuality.Set:
-					this.setItem = p.bits(12);
+					this.setid = p.bits(12);
 					break;
 
 				case ItemQuality.Unique:
-					if (this.code !== 'std') this.uniqueItem = p.bits(12);
+					if (this.code !== 'std') this.uniqueid = p.bits(12);
 					break;
 			}
 		} else {
-			if (this.quality === ItemQuality.Set && UnidSetIndex[this.code]) this.setItem = UnidSetIndex[this.code];
-			if (this.quality === ItemQuality.Unique && UnidUniqueIndex[this.code]) this.uniqueItem = UnidUniqueIndex[this.code];
+			if (this.quality === ItemQuality.Set && UnidSetIndex[this.code]) this.setid = UnidSetIndex[this.code];
+			if (this.quality === ItemQuality.Unique && UnidUniqueIndex[this.code]) this.uniqueid = UnidUniqueIndex[this.code];
 		}
 
 		if (this.quality === ItemQuality.Rare || this.quality === ItemQuality.Crafted) {
@@ -337,8 +344,8 @@ class Item extends require('./Unit') {
 				throw new Error('Invalid runeword param: ' + param);
 			}
 
-			this.runeword = RunewordIndex[rwid];
-			this.runewordName = Runeword[this.runeword].runename;
+			this.runewordid = RunewordIndex[rwid];
+			this.runewordName = Runeword[this.runewordid].runename;
 		}
 
 		if (this.flags.Personalized) {
@@ -364,7 +371,8 @@ class Item extends require('./Unit') {
 
 		if (baseItem.stackable) {
 			if (baseItem.useable) p.bits(5); // Items which can be .interact()'ed with ie Tomes, Scrolls, etc.
-			this.addStat('quantity', p.bits(9));
+			//this.addStat('quantity', p.bits(9));
+			this.addStat(new SignedStat(ItemStat[ItemStatIndex.quantity], p.bits(9)));
 		}
 
 		if (!this.flags.Identified) {
@@ -486,16 +494,78 @@ class Item extends require('./Unit') {
 	}
 
 	addStat(stat) { // s:statname v:value
-		/*if (!this.stats.hasOwnProperty(stat.baseStat.stat)) {
-			this.stats[stat.baseStat.stat] = stat;
+		for (let i = 0; i < this.stats.length; i++) {
+			//if (stat.constructor !== this.stats[i].constructor) continue; // Kinda useless, name is enough
+			if (stat.name !== this.stats[i].name) continue;
+			
+			switch (true) {
+			case stat instanceof ReanimateStat:
+				if (stat.monsterId !== this.stats[i].monsterId) break;
+				this.stats[i].val += stat.val;
+				return true;
+
+			case stat instanceof ElementalSkillsBonusStat:
+				if (stat.element !== this.stats[i].element) break;
+				this.stats[i].val += stat.val;
+				return true;
+
+			case stat instanceof ClassSkillsBonusStat:
+				if (stat.className !== this.stats[i].className) break;
+				this.stats[i].val += stat.val;
+				return true;
+
+			case stat instanceof AuraStat:
+				if (stat.skill !== this.stats[i].skill) break;
+				this.stats[i].level += stat.level;
+				return true;
+				
+			case stat instanceof SkillBonusStat:
+				if (stat.skill !== this.stats[i].skill) break;
+				this.stats[i].val += stat.val;
+				return true;
+
+			//case stat instanceof ChargedSkillStat: // Doesn't stack
+			//case stat instanceof SkillOnEventStat: // Doesn't stack
+			case stat instanceof SkillTabBonusStat:
+				if (stat.tab !== this.stats[i].tab) break;
+				if (stat.charClass !== this.stats[i].charClass) break;
+				this.stats[i].val += stat.val;
+				return true;
+
+			case stat instanceof PoisonDamageStat:
+			case stat instanceof ColdDamageStat:
+				this.stats[i].min += stat.min;
+				this.stats[i].max += stat.max;
+				this.stats[i].frames += stat.frames;
+				return true;
+
+			case stat instanceof DamageRangeStat:
+				this.stats[i].min += stat.min;
+				this.stats[i].max += stat.max;
+				return true;
+
+			case stat instanceof PerLevelStat:
+			case stat instanceof ReplenishStat:
+			case stat instanceof SignedStat:
+			case stat instanceof UnsignedStat:
+				this.stats[i].val += stat.val;
+				return true;
+			}
+
+			this.stats.push(stat);
 			return true;
 		}
-		for (let key in stat) {
-			if (typeof stat[key] !== 'number') continue;
-			this.stats[key] += stat[key];
-		}*/
+
 		this.stats.push(stat);
 		return true;
+	}
+
+	getTier() {
+		const {normcode, ubercode, ultracode} = BaseItem[this.classid]; // Misc items don't have these, so it will return 0
+		if (this.code === normcode) return 0;
+		if (this.code === ubercode) return 1;
+		if (this.code === ultracode) return 2;
+		return 0;
 	}
 
 	isType(t) { // Immediate type
@@ -537,8 +607,8 @@ class Item extends require('./Unit') {
 	getColor() {
 		if (!this.flags.Identified) return 21;
 		if (this.quest) return 21;
-		if (this.quality === ItemQuality.Set && SetItem[this.setItem].invtransform) return ColorCodeIndex[SetItem[this.setItem].invtransform];		
-		if (this.quality === ItemQuality.Unique && Unique[this.uniqueItem].invtransform) return ColorCodeIndex[Unique[this.uniqueItem].invtransform];
+		if (this.quality === ItemQuality.Set && SetItem[this.setid].invtransform) return ColorCodeIndex[SetItem[this.setid].invtransform];		
+		if (this.quality === ItemQuality.Unique && Unique[this.uniqueid].invtransform) return ColorCodeIndex[Unique[this.uniqueid].invtransform];
 		if (!this.isColorAffected()) return 21; // 21 is "regular" aka no color, this is just so it works with ItemScreenshot lib, could be -1 instead
 		if (this.magicSuffixes) {
 			for (let i = 0; i < this.magicSuffixes.length; i++) {
@@ -552,12 +622,96 @@ class Item extends require('./Unit') {
 				if (transColorCode) return ColorCodeIndex[transColorCode];
 			}
 		}
+		if (this.autoMod) {
+			let transColorCode = AutoAffix[this.autoMod].transformcolor;
+			return ColorCodeIndex[transColorCode];
+		}
 		return 21;
 	}
 
 	socketWith(item) {
 
 	}
+
+	serialize(method='JSON') {
+		var i, key, obj;
+		
+		switch (method) {
+		case 'JSON':
+			obj = {};
+
+			for (i = 0; i < Item.serializeKeys.length; i++) {
+				key = Item.serializeKeys[i];
+
+				switch (key) {
+				case 'stats':
+
+					break;
+
+				case 'packet':
+					obj.packet = BufferHelper.getByteStr(this.packet);
+					break;
+				
+				case 'identified':
+					obj.identified = this.flags.Identified;
+					break;
+
+				case 'ethereal':
+					obj.ethereal = this.flags.Ethereal;
+					break;
+				
+				case 'prefix':
+				case 'suffix':
+					if (!this.hasOwnProperty(key)) {
+						obj[key] = -1;
+						break;
+					}
+					obj[key] = this[key].index;
+					break;
+
+				default:
+					if (!this.hasOwnProperty(key)) {
+						obj[key] = 0;
+						break;
+					}
+					if (typeof this[key] === 'object') throw new Error('Cannot serialize nested objects');
+					obj[key] = this[key];
+				}
+			}
+
+			return JSON.stringify(obj);
+		default:
+			throw new Error('Serialize method unsupoprted \'' + method + '\'');
+		}
+		return false;
+	}
+
+	static serializeKeys = [
+		'uhash', // uhash str (specific to the item, two items with the same uhash are literally the same item in the same location, dura, etc...)
+		'hash', // hash str (an equivalent item would have the same hash. same stat but maybe not same char or position etc...)
+		'classid', // classid int
+		'itype', // itype int
+		'location', // location int
+		'bodylocation', // bodylocation int
+		'x', // x int
+		'y', // y int
+		'packet', // packet bytestr
+		'stats', // stats JSON
+		'sockets', // sockets int
+		'fillers', // fillers array[classid]
+		'quality', // quality int
+		'tier', // tier int
+		'color', // color int
+		'ilvl', // ilvl int
+		'ethereal', // ethereal bool
+		'identified', // identified bool
+		'prefix', // prefix int
+		'suffix', // suffix int
+		'uniqueid', // uniqueid int
+		'setid', // setid int
+		'runewordid', // runewordid int
+		'iflags', // iflags int
+	];
 }
 
 module.exports = Item;

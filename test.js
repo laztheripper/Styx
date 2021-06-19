@@ -4,9 +4,13 @@ const BitReader = require('./bin/lib/BitReader');
 var {BaseCodeIndex} = require('./bin/lib/Tables');
 
 var items = [
+  //'9c 04 27 10 19 00 00 00 10 00 80 00 65 00 0e 22 97 e6 06 82 ef 05 bd 38 61 94 c2 68 85 51 0b 23 66 95 37 0f 0f ff 01',
+  //'9c 04 2e 00 17 00 00 00 10 08 80 00 65 00 60 8a 27 e7 06 02 31 c2 2a 54 12 93 12 31 92 46 1f 64 3c c4 01 18 10 80 88 20 46 04 29 a0 fe 03',
+  //'9c 04 27 10 02 00 00 00 10 00 80 00 64 00 08 3a d6 16 03 82 31 95 a7 64 e5 00 8d 0a ff 89 9b 14 37 2b 6e 5a dc fc 07',
+  //'9c 04 35 05 34 00 00 00 11 08 c0 04 64 80 08 72 03 17 06 42 6d 10 2c a8 a0 20 f4 1f 40 49 80 92 80 d2 80 52 04 82 04 a1 ec 85 49 60 a4 b9 dd 71 78 09 4f fc 0f',
  // '9d 06 1e 06 4f 92 42 26 01 17 10 f2 c4 11 00 80 00 65 84 08 30 27 76 07 02 84 40 b1 e0 3f',
   //'9d 06 20 07 00 96 a7 ea 00 0f a0 7a 4a 11 00 82 00 65 a4 0a 20 56 37 06 82 80 e0 00 06 06 ff 01',
- // '9c 04 37 05 2c 00 00 00 11 08 80 04 64 a0 24 62 c6 16 06 42 ed 90 26 28 0f 0e f4 ff 84 56 0a ad 15 5a 2d b4 94 c8 4d b2 34 bc 3f 63 e6 74 c3 c3 c3 8c 10 27 23 e3 3f',
+  //'9c 04 37 05 2c 00 00 00 11 08 80 04 64 a0 24 62 c6 16 06 42 ed 90 26 28 0f 0e f4 ff 84 56 0a ad 15 5a 2d b4 94 c8 4d b2 34 bc 3f 63 e6 74 c3 c3 c3 8c 10 27 23 e3 3f',
   //  '9d 13 19 10 2d 00 00 00 04 2c 00 00 00 18 00 a0 00 64 18 00 20 17 83 03 02',
   // '9d 13 19 10 2e 00 00 00 04 2c 00 00 00 18 00 a0 00 64 18 02 20 27 63 03 02',
   //  '9d 13 19 10 2f 00 00 00 04 2c 00 00 00 18 00 a0 00 64 18 04 20 27 13 03 02',
@@ -42,6 +46,7 @@ var items = [
   //'9d 06 21 05 cb be 1d 4e 00 46 8b fd dd 11 00 82 00 65 84 08 30 37 47 07 82 80 40 41 61 0d 89 fc 07'
 ];
 
+const StatTypes = require('./bin/lib/StatTypes');
 
 for (let i = 0; i < items.length; i++) {
   var s = Buffer.from(items[i].replace(/ /g, ''), 'hex');
@@ -50,9 +55,14 @@ for (let i = 0; i < items.length; i++) {
   items[i] = n;
 
   let it = new Item(items[i]);
-  //console.log(it);
+  console.log(it);
+  console.log(it.serialize());
+
+  for (var s = 0; s < it.stats.length; s++){
+    switch (true) {
+      case it.stats[s] instanceof StatTypes.SignedStat:
+        console.log(it.stats[s].name);
+    }
+  }
 }
 
-const WS = require('./bin/lib/ws');
-
-const wss = new WS('dev.travincal.com/ws');

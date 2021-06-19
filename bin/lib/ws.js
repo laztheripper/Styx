@@ -10,7 +10,7 @@ class WS {
     // No touchy
 
     async create() {
-		this.socket = new WebSocket(this.url);
+		this.socket = new WebSocket(this.url, { rejectUnauthorized: false });
 		this.socket.onerror		= (...args) => this.onerror(...args);
 		this.socket.onopen		= (...args) => this.onopen(...args);
 		this.socket.onclose		= (...args) => this.onclose(...args);
@@ -18,7 +18,7 @@ class WS {
     }
 
     onerror(e) {
-        throw new Error(e);
+        console.log(e);
     }
 
     onclose() {
@@ -36,6 +36,7 @@ class WS {
         this.pong = true;
         try {
             msg = JSON.parse(msg);
+            if (this.handler) this.handler(msg);
         } catch (e) {
             console.log(e);
         }

@@ -23,11 +23,6 @@ class Game {
 		delete this.collect; // Doesnt need to be called again
 	}
 
-	destroy() {
-		// For all items we have, we call the destroy function if need
-		Object.keys(this).filter(key => this[key] && this[key].hasOwnProperty('destroy')).forEach(key => this[key].destroy());
-	}
-
 	spoofMessage(msg, color, type, nick) {
 		var i, buff, ind = 0;
 		
@@ -97,7 +92,8 @@ class Game {
 		this.gameServer.once(0x5A, ({packetData}) => {
 			this.me.charname = BufferHelper.getCString(packetData.raw, 16, 8);
 			this.me.account = BufferHelper.getCString(packetData.raw, 16, 24);
-			//console.log('0x5A', this.me); // Last one received related to `me` 
+			//console.log('0x5A', this.me); // Last one received related to `me`
+			this.spoofMessage(Project.name + ' ' + Project.version, ChatColor.BrightWhite, ChatType.Print);
 		});
 
 		this.gameServer.once(0x01, ({packetData}) => {
@@ -117,10 +113,12 @@ class Game {
 			console.log('Game exit');
 			console.log(this.itemCollector.items);
 		});
-
-		this.spoofMessage(Project.name + ' ' + Project.version, ChatColor.BrightWhite, ChatType.Print);
 	}
 
+	destroy() {
+		// For all items we have, we call the destroy function if need
+		Object.keys(this).filter(key => this[key] && this[key].hasOwnProperty('destroy')).forEach(key => this[key].destroy());
+	}
 }
 
 module.exports = Game;
