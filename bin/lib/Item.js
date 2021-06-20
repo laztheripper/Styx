@@ -23,6 +23,8 @@ const {
 	Color,
 	Runeword,
 	Unique,
+	GemRune,
+	Property,
 	
 	// Dicts
 	BaseCodeIndex,
@@ -30,9 +32,11 @@ const {
 	ItemStatIndex,
 	SetItemIndex,
 	ColorCodeIndex,
+	GemRuneCodeIndex,
 	RunewordIndex,
 	UnidSetIndex,
 	UnidUniqueIndex,
+	PropertyCodeIndex,
 } = require('./Tables');
 
 class ItemAffix {
@@ -402,6 +406,95 @@ class Item extends require('./Unit') {
 		//while (setMods-- > 0) this.readStat(br);
 	}
 
+	readStatProp(statID, min, max, param, val) {
+		if (typeof statID === 'string') statID = ItemStatIndex[statID];
+		if (typeof statID === 'object') statID = statID.rowindex;
+
+		let baseStat = ItemStat[statID];
+		
+		if (!baseStat.saveparambits) { // Has no value in this column in ItemStatCost
+			if (baseStat.opbase === 'level') {
+				return this.addStat(new PerLevelStat(baseStat, param));
+			}
+		
+			switch (baseStat.rowindex) {
+				case ItemStatIndex.itemmindamagepercent:
+				case ItemStatIndex.itemmaxdamagepercent:
+					baseStat = ItemStat[18]; // Always itemmindamagepercent since min and max are always same. except for %maxdmg/lvl
+					return this.addStat(new DamageRangeStat(baseStat, min, max));
+
+				case ItemStatIndex.firemindam:
+				case ItemStatIndex.lightmindam:
+				case ItemStatIndex.magicmindam:
+					return this.addStat(new DamageRangeStat(baseStat, min, max));
+	
+				case ItemStatIndex.coldmindam:
+					return this.addStat(new ColdDamageStat(baseStat, min, max, param));
+	
+				case ItemStatIndex.poisonmindam:
+					return this.addStat(new PoisonDamageStat(baseStat, min, max, param));
+		
+				case ItemStatIndex.itemreplenishdurability:
+				case ItemStatIndex.itemreplenishquantity:
+					return this.addStat(new ReplenishStat(baseStat, param));
+
+				case ItemStatIndex.quantity:
+					return this.addStat(new SignedStat(baseStat, max)); // For any varying prop, put max (as opposed to min)
+	
+				default:
+					if (baseStat.signed) {
+						return this.addStat(new SignedStat(baseStat, max));
+					} else {
+						return this.addStat(new UnsignedStat(baseStat, max));
+					}
+			}
+		} else {
+			switch (baseStat.rowindex) {
+				case ItemStatIndex.itemsingleskill:
+					return this.addStat(new SkillBonusStat(baseStat, param, max, false)); // False is non-oskill
+
+				case ItemStatIndex.itemnonclassskill:
+					return this.addStat(new SkillBonusStat(baseStat, param, max, true)); // True for oskill
+
+				case ItemStatIndex.itemaura:
+					return this.addStat(new AuraStat(baseStat, param, max));
+
+				case ItemStatIndex.itemelemskill:
+					return this.addStat(new ElementalSkillsBonusStat(baseStat, val, max));
+	
+				case ItemStatIndex.itemaddclassskills:
+					return this.addStat(new ClassSkillsBonusStat(baseStat, val, max));
+
+				case ItemStatIndex.itemreanimate:
+					return this.addStat(new ReanimateStat(baseStat, param, max)); // Mob id, ctc%
+	
+				case ItemStatIndex.itemskillonattack:
+				case ItemStatIndex.itemskillonkill:
+				case ItemStatIndex.itemskillondeath:
+				case ItemStatIndex.itemskillonhit:
+				case ItemStatIndex.itemskillonlevelup:
+				case ItemStatIndex.itemskillongethit:
+					return this.addStat(new SkillOnEventStat(baseStat, max, param, min)); // Level, skill, chance
+
+				case ItemStatIndex.itemchargedskill:
+					throw new Error('Fuck that. not supporting charged skills here');
+					return this.addStat(new ChargedSkillStat(
+						baseStat,
+						level,
+						param, // good
+						charges,
+						maxcharges
+					));
+
+				case ItemStatIndex.itemaddskilltab:
+					return this.addStat(new SkillTabBonusStat(baseStat, param % 3, Math.floor(param / 3), 0, max)); // Tab, class, unk, val
+			}
+		}
+		
+		throw new Error('I don\'t know what to do here');
+		return false;
+	}
+
 	readStat(br) {
 		const p = {};
 		Object.defineProperties(p, BitReader.shortHandBr(br));
@@ -422,6 +515,7 @@ class Item extends require('./Unit') {
 			switch (baseStat.rowindex) {
 				case ItemStatIndex.itemmindamagepercent:
 				case ItemStatIndex.itemmaxdamagepercent:
+					baseStat = ItemStat[18]; // Always itemmindamagepercent since min and max are always same. except for %maxdmg/lvl
 					return this.addStat(new DamageRangeStat(baseStat, p.bits(baseStat.savebits), p.bits(baseStat.savebits)));
 
 				case ItemStatIndex.firemindam:
@@ -456,8 +550,10 @@ class Item extends require('./Unit') {
 		} else {
 			switch (baseStat.rowindex) {
 				case ItemStatIndex.itemsingleskill:
+					return this.addStat(new SkillBonusStat(baseStat, p.bits(baseStat.saveparambits), p.bits(baseStat.savebits), false));
+
 				case ItemStatIndex.itemnonclassskill:
-					return this.addStat(new SkillBonusStat(baseStat, p.bits(baseStat.saveparambits), p.bits(baseStat.savebits)));
+					return this.addStat(new SkillBonusStat(baseStat, p.bits(baseStat.saveparambits), p.bits(baseStat.savebits), true));
 
 				case ItemStatIndex.itemaura:
 					return this.addStat(new AuraStat(baseStat, p.bits(baseStat.saveparambits), p.bits(baseStat.savebits)));
@@ -629,8 +725,52 @@ class Item extends require('./Unit') {
 		return 21;
 	}
 
-	socketWith(item) {
+	getGemStats(gem) {
+		var row = GemRune[GemRuneCodeIndex[gem.code]],
+			i, n, col, code, param, min, max, stat, val, prop;
 
+		if (this.hasType('shld')) {
+			col = 'shield';
+		} else if (this.hasType('tors') || this.hasType('helm')) {
+			col = 'helm';
+		} else if (this.hasType('weap')) {
+			col = 'weapon';
+		}
+
+		for (i = 1; i <= 3; i++) {
+			code	= row[col + 'mod' + i + 'code'];
+			if (!code) continue;
+			param	= row[col + 'mod' + i + 'param'];
+			min		= row[col + 'mod' + i + 'min'];
+			max 	= row[col + 'mod' + i + 'max'];
+
+			prop = Property[PropertyCodeIndex[code]];
+			if (!prop.stat1) throw new Error('Forgot a stat for property: ' + prop.code);
+
+			for (n = 1; n <= 7; n++) {
+				stat = prop['stat' + n];
+				if (!stat) break;
+				val = prop['val' + n];
+				gem.readStatProp(stat, min, max, param, val); // Val is from property
+			}
+		}
+	}
+
+	socketWith(item) {
+		if (item.isType('gem') || item.isType('rune')) {
+			this.getGemStats(item);
+		}
+
+		for (var i = 0; i < item.stats.length; i++) {
+			this.addStat(item.stats[i]);
+		}
+
+		if (this.color === 21 && !this.fillers && this.isColorAffected() && item.isType('gem')) {
+			let gem = GemRune[GemRuneCodeIndex[item.code]];
+			if (gem.transform) this.color = gem.transform;
+		}
+
+		this.fillers.push(item.classid); // Todo think of a way to include gfx id not just basetype (jewels)
 	}
 
 	serialize(method='JSON') {

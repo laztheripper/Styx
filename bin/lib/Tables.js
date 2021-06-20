@@ -48,23 +48,29 @@ const SetItem		= readTable('SetItems.txt');
 const Color 		= readTable('colors.txt');
 const Runeword		= readTable('Runes.txt');
 const Unique		= readTable('UniqueItems.txt');
+const GemRune    	= readTable('gems.txt');
+const Property 		= readTable('Properties.txt');
 
 const BaseCodeIndex		= {}; // Base code: row index
 const ItemStatIndex		= {}; // Stat: row index
-const TypeCodeIndex		= {}; // Item type code: row index 
+const TypeCodeIndex		= {}; // Item type code: row index
+const GemRuneCodeIndex	= {}; // Code: row index
 const SetItemIndex		= {}; // Set item name: row index
 const ColorCodeIndex	= {}; // Color code: row index
 const RunewordIndex		= {}; // Runeword Name (ie Runeword96): row index
 const UnidUniqueIndex	= {}; // Keys are basetypes, values are Unique row index or false when not knowable
 const UnidSetIndex		= {}; // Keys are basetypes, values are SetItem row index or false when not knowable
+const PropertyCodeIndex = {}; // Prop name: row id
 
 { // Populate dicts
 	var i;
-	for (i = 0; i < BaseItem.length; i++) BaseCodeIndex[BaseItem[i].code] = i;
-	for (i = 0; i < ItemStat.length; i++) ItemStatIndex[ItemStat[i].stat] = i;
-	for (i = 0; i < ItemType.length; i++) TypeCodeIndex[ItemType[i].code] = i;
-	for (i = 0; i < SetItem.length;  i++) SetItemIndex[SetItem[i].index]  = i;
-	for (i = 0; i < Color.length;	 i++) ColorCodeIndex[Color[i].code]   = i;
+	for (i = 0; i < BaseItem.length; i++) BaseCodeIndex[BaseItem[i].code]		= i;
+	for (i = 0; i < ItemStat.length; i++) ItemStatIndex[ItemStat[i].stat]		= i;
+	for (i = 0; i < ItemType.length; i++) TypeCodeIndex[ItemType[i].code]		= i;
+	for (i = 0; i < SetItem.length;  i++) SetItemIndex[SetItem[i].index]		= i;
+	for (i = 0; i < Color.length;	 i++) ColorCodeIndex[Color[i].code]			= i;
+	for (i = 0; i < GemRune.length;	 i++) GemRuneCodeIndex[GemRune[i].code]		= i;
+	for (i = 0; i < Property.length; i++) PropertyCodeIndex[Property[i].code]	= i;
 	for (i = 0; i < Runeword.length; i++) RunewordIndex[parseInt(Runeword[i].name.replace(/\D/g, ''))] = i;
 	for (i = 0; i < ItemType.length; i++) {
 		if (!ItemType[i].code) {
@@ -103,6 +109,10 @@ const UnidSetIndex		= {}; // Keys are basetypes, values are SetItem row index or
 		}
 		UnidSetIndex[SetItem[i].item] = i;
 	}
+	Property[27].stat1 = 'mindamage';
+	Property[28].stat1 = 'maxdamage';
+	Property[29].stat1 = 'itemmindamagepercent';
+	Property[242].stat1 = 'itemindesctructible';
 }
 
 // Tables
@@ -116,15 +126,19 @@ module.exports.MagicSuffix	= MagicSuffix;
 module.exports.AutoAffix	= AutoAffix;
 module.exports.SetItem		= SetItem;
 module.exports.Color		= Color;
+module.exports.GemRune		= GemRune;
 module.exports.Runeword		= Runeword;
 module.exports.Unique		= Unique;
+module.exports.Property		= Property;
 
 // Dicts
-module.exports.BaseCodeIndex	= BaseCodeIndex;
-module.exports.TypeCodeIndex	= TypeCodeIndex;
-module.exports.ItemStatIndex	= ItemStatIndex;
-module.exports.SetItemIndex		= SetItemIndex;
-module.exports.ColorCodeIndex	= ColorCodeIndex;
-module.exports.RunewordIndex	= RunewordIndex;
-module.exports.UnidUniqueIndex	= UnidUniqueIndex;
-module.exports.UnidSetIndex		= UnidSetIndex;
+module.exports.BaseCodeIndex		= BaseCodeIndex;
+module.exports.TypeCodeIndex		= TypeCodeIndex;
+module.exports.ItemStatIndex		= ItemStatIndex;
+module.exports.SetItemIndex			= SetItemIndex;
+module.exports.ColorCodeIndex		= ColorCodeIndex;
+module.exports.GemRuneCodeIndex		= GemRuneCodeIndex;
+module.exports.RunewordIndex		= RunewordIndex;
+module.exports.UnidUniqueIndex		= UnidUniqueIndex;
+module.exports.UnidSetIndex			= UnidSetIndex;
+module.exports.PropertyCodeIndex	= PropertyCodeIndex;
