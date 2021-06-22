@@ -25,6 +25,7 @@ const {
 	Unique,
 	GemRune,
 	Property,
+	Skill,
 	
 	// Dicts
 	BaseCodeIndex,
@@ -86,7 +87,7 @@ class Item extends require('./Unit') {
 		return it;
 	}
 
-	constructor(buffer, game) {
+	constructor(buffer, game, fake) {
 		super();
 		this.packet = Buffer.alloc(buffer.length);
 		buffer.copy(this.packet, 0);
@@ -101,9 +102,12 @@ class Item extends require('./Unit') {
 
 		this.type 			= 4; // Unit type (always item...)
 		this.stats			= [];
+		this.fillers		= [];
+		this.gfx 			= 0; // Gfx id for charms, jewels, amulets, etc
 		this.items			= {};
 		this.UnitId			= this.uid; // Just a shorthand
 		this.UnitType		= this.type; // Just a shorthand
+		this.singleskillreq = 0;
 
 		if (typeof game === 'undefined') var game = {me:{uid:666}};
 
@@ -183,6 +187,7 @@ class Item extends require('./Unit') {
 			this.name = p.string();
 			this.code = 'ear';
 			this.classid = 556;
+			this.baseItem = BaseItem[this.classid];
 			return;
 		}
 
@@ -190,71 +195,73 @@ class Item extends require('./Unit') {
 		p.bits(8);
 		this.classid = BaseCodeIndex[this.code];
 		this.tier = this.getTier();
-
-		switch (this.location) {
-			case ItemLocation.Equipment:
-			case ItemLocation.Inventory:
-			case ItemLocation.Cube:
-			case ItemLocation.Stash:
-			case ItemLocation.Item:
-				break;
-			default:
-				this.remove = true;
-		}
-
-		switch (this.action) {
-			case ItemActionType.PutInContainer:
-			case ItemActionType.Equip:
-			case ItemActionType.IndirectlySwapBodyItem:
-			case ItemActionType.SwapBodyItem:
-			case ItemActionType.AddQuantity:
-			case ItemActionType.SwapInContainer:
-			case ItemActionType.AutoUnequip:
-			case ItemActionType.ItemInSocket:
-			case ItemActionType.UpdateStats:
-			case ItemActionType.WeaponSwitch:
-				break;
-			default:
-				this.remove = true;
-		}
-
-		switch (this.destination) {
-			case ItemDestination.Container:
-			case ItemDestination.Equipment:
-			case ItemDestination.Item:
-				break;
-			case ItemDestination.Belt:
-			case ItemDestination.Ground:
-			case ItemDestination.Cursor:
-			default:
-				this.remove = true;
-		}
-
-		if (this.ownerType === 4 && !game.itemCollector.items.hasOwnProperty(this.ownerUID)) {
-			this.remove = true;
-		}
 		
 		if (!this.ownerUID && this.action !== ItemActionType.AddToShop) {
 			this.ownerUID = game.me.uid; // "it either has no owner or it belongs to you or it belongs to shop. 9c never belongs to other players"
 		}
 
-		if (this.ownerType === 0 && this.ownerUID !== game.me.uid) {
-			this.remove = true;
+		if (!fake) {
+			switch (this.location) {
+				case ItemLocation.Equipment:
+				case ItemLocation.Inventory:
+				case ItemLocation.Cube:
+				case ItemLocation.Stash:
+				case ItemLocation.Item:
+					break;
+				default:
+					this.remove = true;
+			}
+
+			switch (this.action) {
+				case ItemActionType.PutInContainer:
+				case ItemActionType.Equip:
+				case ItemActionType.IndirectlySwapBodyItem:
+				case ItemActionType.SwapBodyItem:
+				case ItemActionType.AddQuantity:
+				case ItemActionType.SwapInContainer:
+				case ItemActionType.AutoUnequip:
+				case ItemActionType.ItemInSocket:
+				case ItemActionType.UpdateStats:
+				case ItemActionType.WeaponSwitch:
+					break;
+				default:
+					this.remove = true;
+			}
+
+			switch (this.destination) {
+				case ItemDestination.Container:
+				case ItemDestination.Equipment:
+				case ItemDestination.Item:
+					break;
+				case ItemDestination.Belt:
+				case ItemDestination.Ground:
+				case ItemDestination.Cursor:
+				default:
+					this.remove = true;
+			}
+
+			if (this.ownerType === 4 && !game.itemCollector.items.hasOwnProperty(this.ownerUID)) {
+				this.remove = true;
+			}
+
+			if (this.ownerType === 0 && this.ownerUID !== game.me.uid) {
+				this.remove = true;
+			}
+
+			if (this.ownerType === 1 && game.merc.uid && this.ownerUID !== game.merc.uid) {
+				this.remove = true;
+			}
 		}
 
-		if (this.ownerType === 1 && game.merc.uid && this.ownerUID !== game.merc.uid) {
-			this.remove = true;
-		}
-
-		const baseItem = BaseItem[this.classid];
-		if (baseItem.quest) this.quest = true;
+		this.baseItem = BaseItem[this.classid];
+		if (this.baseItem.quest) this.quest = true;
 
 		if (this.classid === 523) { // Gold
 			//this.stats.Quantity = p.bits(p.bit ? 32 : 12);
 			this.addStat(new SignedStat(ItemStat[ItemStatIndex.quantity], p.bits(p.bit ? 32 : 12)));
 		}
 		
-		const itemTypeIndex = TypeCodeIndex[baseItem.type];
+		const itemTypeIndex = TypeCodeIndex[this.baseItem.type];
 		const itemType = ItemType[itemTypeIndex];
 		this.itype = itemTypeIndex; // Row id from types table
 
@@ -275,7 +282,7 @@ class Item extends require('./Unit') {
 		this.ilvl = p.bits(7); // illvl
 		this.quality = p.bits(4); // quality
 		if (this.remove) return;
-		if (p.boolean) this.graphic = p.bits(3); // Graphic : 1 : 3+1
+		if (p.boolean) this.gfx = p.bits(3); // Graphic : 1 : 3+1
 		if (p.boolean) this.autoMod = p.bits(11); // Automod : 1 : 11+1
 
 		if (this.flags.Identified) {
@@ -373,8 +380,8 @@ class Item extends require('./Unit') {
 			this.sockets = br.bit(ItemStat[ItemStatIndex['itemnumsockets']].savebits);
 		}
 
-		if (baseItem.stackable) {
-			if (baseItem.useable) p.bits(5); // Items which can be .interact()'ed with ie Tomes, Scrolls, etc.
+		if (this.baseItem.stackable) {
+			if (this.baseItem.useable) p.bits(5); // Items which can be .interact()'ed with ie Tomes, Scrolls, etc.
 			//this.addStat('quantity', p.bits(9));
 			this.addStat(new SignedStat(ItemStat[ItemStatIndex.quantity], p.bits(9)));
 		}
@@ -441,6 +448,15 @@ class Item extends require('./Unit') {
 				case ItemStatIndex.quantity:
 					return this.addStat(new SignedStat(baseStat, max)); // For any varying prop, put max (as opposed to min)
 	
+				case ItemStatIndex.firemaxdam: // Packet will only contain min, reading from gems table gives us min and max without these.
+				case ItemStatIndex.lightmaxdam:
+				case ItemStatIndex.magicmaxdam:
+				case ItemStatIndex.coldmaxdam:
+				case ItemStatIndex.poisonmaxdam:
+				case ItemStatIndex.coldlength:
+				case ItemStatIndex.poisonlength:
+					return;
+
 				default:
 					if (baseStat.signed) {
 						return this.addStat(new SignedStat(baseStat, max));
@@ -451,10 +467,9 @@ class Item extends require('./Unit') {
 		} else {
 			switch (baseStat.rowindex) {
 				case ItemStatIndex.itemsingleskill:
-					return this.addStat(new SkillBonusStat(baseStat, param, max, false)); // False is non-oskill
-
 				case ItemStatIndex.itemnonclassskill:
-					return this.addStat(new SkillBonusStat(baseStat, param, max, true)); // True for oskill
+					if (this.singleskillreq < Skill[param].reqlevel) this.singleskillreq = Skill[param].reqlevel;
+					return this.addStat(new SkillBonusStat(baseStat, param, max));
 
 				case ItemStatIndex.itemaura:
 					return this.addStat(new AuraStat(baseStat, param, max));
@@ -535,7 +550,10 @@ class Item extends require('./Unit') {
 
 				case ItemStatIndex.quantity:
 					return this.addStat(new SignedStat(baseStat, p.bits(9)));
-	
+				
+				case ItemStatIndex.damagepercent:
+					throw new Error('Damagepercent received from packet, wat?');
+
 				default:
 					if (baseStat.signed) {
 						let val = p.bits(baseStat.savebits);
@@ -550,10 +568,11 @@ class Item extends require('./Unit') {
 		} else {
 			switch (baseStat.rowindex) {
 				case ItemStatIndex.itemsingleskill:
-					return this.addStat(new SkillBonusStat(baseStat, p.bits(baseStat.saveparambits), p.bits(baseStat.savebits), false));
-
 				case ItemStatIndex.itemnonclassskill:
-					return this.addStat(new SkillBonusStat(baseStat, p.bits(baseStat.saveparambits), p.bits(baseStat.savebits), true));
+					let skillId = p.bits(baseStat.saveparambits);
+					let val = p.bits(baseStat.savebits);
+					if (this.singleskillreq < Skill[skillId].reqlevel) this.singleskillreq = Skill[skillId].reqlevel;
+					return this.addStat(new SkillBonusStat(baseStat, skillId, val));
 
 				case ItemStatIndex.itemaura:
 					return this.addStat(new AuraStat(baseStat, p.bits(baseStat.saveparambits), p.bits(baseStat.savebits)));
@@ -592,7 +611,7 @@ class Item extends require('./Unit') {
 	addStat(stat) { // s:statname v:value
 		for (let i = 0; i < this.stats.length; i++) {
 			//if (stat.constructor !== this.stats[i].constructor) continue; // Kinda useless, name is enough
-			if (stat.name !== this.stats[i].name) continue;
+			if (stat.id !== this.stats[i].id) continue;
 			
 			switch (true) {
 			case stat instanceof ReanimateStat:
@@ -606,7 +625,7 @@ class Item extends require('./Unit') {
 				return true;
 
 			case stat instanceof ClassSkillsBonusStat:
-				if (stat.className !== this.stats[i].className) break;
+				if (stat.charClass !== this.stats[i].charClass) break;
 				this.stats[i].val += stat.val;
 				return true;
 
@@ -648,11 +667,11 @@ class Item extends require('./Unit') {
 				return true;
 			}
 
-			this.stats.push(stat);
+			this.stats.push(stat); // Stat existed but it's not one we can merge, like skillonevent stuff
 			return true;
 		}
 
-		this.stats.push(stat);
+		this.stats.push(stat); // Stat didn't exist on the item, add new
 		return true;
 	}
 
@@ -689,6 +708,196 @@ class Item extends require('./Unit') {
 	isMisc() {
 		if (this.classid >= 508) return true;
 		return false;
+	}
+
+	getDerivedStats() { // Totals at char level 99, visually the user will be able to adjust but the queries will be on 99 data
+		if (!this.dstats) this.getFlatStats();
+
+		if (!this.isMisc()) { 	// Stat Requirements - Only for non-misc
+			let baseStr = (this.baseItem.reqstr || 0) - (this.flags.Ethereal ? 10 : 0);
+			let baseDex = (this.baseItem.reqdex || 0) - (this.flags.Ethereal ? 10 : 0);
+
+			if (this.dstats.hasOwnProperty(ItemStatIndex.itemreqpercent)) {
+				baseStr += Math.floor((baseStr * this.dstats[ItemStatIndex.itemreqpercent]) / 100);
+				baseDex += Math.floor((baseDex * this.dstats[ItemStatIndex.itemreqpercent]) / 100);
+			}
+
+			if (baseStr > 0) this.dstats['strreq'] = baseStr;
+			if (baseDex > 0) this.dstats['dexreq'] = baseDex;
+		}
+
+		if (this.durability) { // Total durability. this.durability is the actual value, can be >= max before calc. Indestructible doesn't affect durability
+			if (this.dstats.hasOwnProperty(ItemStatIndex.itemmaxdurabilitypercent)) // Percent bonus
+				this.maxDurability += Math.floor((this.maxDurability * this.dstats[ItemStatIndex.itemmaxdurabilitypercent]) / 100);
+			if (this.dstats.hasOwnProperty(ItemStatIndex.maxdurability)) // Flat bonus added
+				this.maxDurability += this.dstats[ItemStatIndex.maxdurability];
+			this.dstats['dura'] = Math.min(this.durability, 333); // Capped at 333
+			this.dstats['maxdura'] = Math.min(this.maxDurability, 333);
+		}
+
+		var lvlreq = [this.getLevelRequirement()];
+		for (var uid in this.items) lvlreq.push(this.items[uid].getLevelRequirement());
+		lvlreq = Math.max(...lvlreq);
+		if (lvlreq > 1) this.dstats['lvlreq'] = lvlreq;
+
+		if (this.isWeapon()) { // Total 1handed min-max, 2handed min-max, Throw min-max - Only for weapons
+			let minDamagePercent = 100 + (this.dstats[ItemStatIndex.damagepercent] || 0);
+			let maxDamagePercent = minDamagePercent + Math.floor((this.dstats[ItemStatIndex.itemmaxdamagepercentperlevel] || 0) * 99);
+			let minDamageBonus	 = (this.dstats[ItemStatIndex.mindamage] || 0) || (this.dstats[ItemStatIndex.secondarymindamage] || 0) || (this.dstats[ItemStatIndex.itemthrowmindamage] || 0) || 0;
+			let maxDamageBonus	 = (this.dstats[ItemStatIndex.maxdamage] || 0) || (this.dstats[ItemStatIndex.secondarymaxdamage] || 0) || (this.dstats[ItemStatIndex.itemthrowmaxdamage] || 0) || Math.floor((this.dstats[ItemStatIndex.itemmaxdamageperlevel] || 0) * 99) || 0;
+
+			let minOneHandDamage = this.baseItem.mindam 		? Math.floor((Math.floor(this.baseItem.mindam 		  * (this.flags.Ethereal ? 1.5 : 1)) * minDamagePercent) / 100) + minDamageBonus : 0;
+			let minTwoHandDamage = this.baseItem['2handmindam'] ? Math.floor((Math.floor(this.baseItem['2handmindam'] * (this.flags.Ethereal ? 1.5 : 1)) * minDamagePercent) / 100) + minDamageBonus : 0;
+			let minThrowDamage	 = this.baseItem.minmisdam		? Math.floor((Math.floor(this.baseItem.minmisdam 	  * (this.flags.Ethereal ? 1.5 : 1)) * minDamagePercent) / 100) + minDamageBonus : 0;
+
+			let maxOneHandDamage = this.baseItem.maxdam 		? Math.floor((Math.floor(this.baseItem.maxdam 		  * (this.flags.Ethereal ? 1.5 : 1)) * maxDamagePercent) / 100) + maxDamageBonus : 0;
+			let maxTwoHandDamage = this.baseItem['2handmaxdam'] ? Math.floor((Math.floor(this.baseItem['2handmaxdam'] * (this.flags.Ethereal ? 1.5 : 1)) * maxDamagePercent) / 100) + maxDamageBonus : 0;
+			let maxThrowDamage	 = this.baseItem.maxmisdam		? Math.floor((Math.floor(this.baseItem.maxmisdam	  * (this.flags.Ethereal ? 1.5 : 1)) * maxDamagePercent) / 100) + maxDamageBonus : 0;
+			
+			if (minOneHandDamage && minOneHandDamage >= maxOneHandDamage) maxOneHandDamage = minOneHandDamage + 1;
+			if (minTwoHandDamage && minTwoHandDamage >= maxTwoHandDamage) maxTwoHandDamage = minTwoHandDamage + 1;
+			if (minThrowDamage	 && minThrowDamage   >= maxThrowDamage)   maxThrowDamage   = minThrowDamage	  + 1;
+
+			if (minOneHandDamage) this.dstats['min1hdam'] = minOneHandDamage;
+			if (minTwoHandDamage) this.dstats['min2hdam'] = minTwoHandDamage;
+			if (minThrowDamage) this.dstats['minthrowdam'] = minThrowDamage;
+
+			if (maxOneHandDamage) this.dstats['max1hdam'] = maxOneHandDamage;
+			if (maxTwoHandDamage) this.dstats['max2hdam'] = maxTwoHandDamage;
+			if (maxThrowDamage) this.dstats['maxthrowdam'] = maxThrowDamage;
+		}
+
+		if (this.isArmor()) {
+			let def = Math.floor(this.baseDefense * (100 + (this.dstats[ItemStatIndex.itemarmorpercent] || 0)) / 100) + (this.dstats[ItemStatIndex.armorclass] || 0) + Math.floor((this.dstats[ItemStatIndex.itemarmorperlevel] || 0) * 99);
+			if (def > 0) this.dstats['def'] = def;
+		}
+
+		if (this.baseItem.stackable) {
+			this.dstats['maxquant'] = (this.dstats[ItemStatIndex.itemextrastack] || 0) + (this.baseItem.maxstack || 0);
+		}
+	}
+
+	isUpped() {
+		if (!this.dstats.hasOwnProperty(ItemStatIndex.itemlevelreq)) return 0; // +0
+		if (this.dstats[ItemStatIndex.itemlevelreq] <= 7) return 1;
+		return 2; // +7
+	}
+
+	getLevelRequirement() {
+		var basereq = this.baseItem.levelreq, i, lvlreq, areq = 0,
+			areqs = [],
+			reqs = [basereq];
+
+		if (this.flags.Identified) {
+			switch (this.quality) {
+				case ItemQuality.Magic: // Affixes
+					if (this.prefix) areqs.push(MagicPrefix[this.prefix.index].levelreq || 0);
+					if (this.suffix) areqs.push(MagicSuffix[this.suffix.index].levelreq || 0);
+					if (this.autoMod) areqs.push(AutoAffix[this.autoMod].levelreq || 0);
+					break;
+				case ItemQuality.Rare:
+					if (this.autoMod) areqs.push(AutoAffix[this.autoMod].levelreq || 0);
+					break;
+				case ItemQuality.Set:
+					reqs.push(SetItem[this.setid].lvlreq || 0);
+					break;
+				case ItemQuality.Unique:
+					reqs.push(Unique[this.uniqueid].lvlreq || 0);
+					break;
+			}
+
+			if (this.magicPrefixes) {
+				for (i = 0; i < this.magicPrefixes.length; i++) {
+					areqs.push(MagicPrefix[this.magicPrefixes[i].index].levelreq);
+				}
+			}
+	
+			if (this.magicSuffixes) {
+				for (i = 0; i < this.magicSuffixes.length; i++) {
+					areqs.push(MagicSuffix[this.magicSuffixes[i].index].levelreq);
+				}
+			}
+
+			areq = Math.max(...areqs);
+			
+			if (this.quality === ItemQuality.Crafted) {
+				areq += 10;
+				if (this.magicPrefixes) areq += 3 * this.magicPrefixes.length;
+				if (this.magicSuffixes) areq += 3 * this.magicSuffixes.length;
+			}
+
+			reqs.push(areq);
+		}
+
+		reqs.push(this.singleskillreq || 0); // Staffmod level reqs
+		lvlreq = Math.max(...reqs);
+		if (this.dstats) lvlreq += this.dstats.itemlevelreq || 0; // When upped or double upped (+5 and +7 respectively, for a total of +12) socketed items are never upped, so no need to flatten stats
+		return Math.min(98, lvlreq);
+	}
+
+	getFlatStats() {
+		this.dstats = {};
+
+		for (var i = 0; i < this.stats.length; i++) {
+			var stat = this.stats[i];
+			
+			switch (stat.id) {
+				case ItemStatIndex.itemmindamagepercent:
+					this.dstats[ItemStatIndex.damagepercent] = stat.max; // Just always enhanced damage, min-max should always be same.
+					break;
+
+				case ItemStatIndex.firemindam:
+				case ItemStatIndex.coldmindam:
+				case ItemStatIndex.lightmindam:
+				case ItemStatIndex.poisonmindam:
+				case ItemStatIndex.magicmindam:
+					this.dstats[stat.id] = stat.min;
+					this.dstats[stat.id+1] = stat.max;
+					break;
+				
+				case ItemStatIndex.itemskillonattack:
+				case ItemStatIndex.itemskillondeath:
+				case ItemStatIndex.itemskillonhit:
+				case ItemStatIndex.itemskillongethit:
+				case ItemStatIndex.itemskillonkill:
+				case ItemStatIndex.itemskillonlevelup:
+					this.dstats[stat.id + '_' + stat.skill + '_level'] = stat.level;
+					this.dstats[stat.id + '_' + stat.skill + '_chance'] = stat.chance;
+					break;
+
+				case ItemStatIndex.itemchargedskill:
+					this.dstats[stat.id + '_' + stat.skill + '_level'] = stat.level;
+					this.dstats[stat.id + '_' + stat.skill + '_charges'] = stat.charges;
+					this.dstats[stat.id + '_' + stat.skill + '_maxcharges'] = stat.maxcharges;
+					break;
+				
+				case ItemStatIndex.itemaura:
+					this.dstats[stat.id + '_' + stat.skill + '_level'] = stat.level;
+					break;
+
+				case ItemStatIndex.itemaddskilltab:
+					this.dstats[stat.id + '_' + (stat.charClass * 3 + stat.tab)] = stat.val; // Use 0-20 notation
+					break;
+
+				case ItemStatIndex.itemaddclassskills:
+					this.dstats[stat.id + '_' + stat.charClass] = stat.val;
+					break;
+				
+				case ItemStatIndex.itemsingleskill:
+				case ItemStatIndex.itemnonclassskill:
+					this.dstats[stat.id + '_' + stat.skill] = stat.val;
+					break;
+
+				case ItemStatIndex.itemreanimate:
+					this.dstats[stat.id + '_' + stat.monsterId] = stat.val;
+					break;
+				
+				case ItemStatIndex.itemelemskill: // stat.element is ignored ingame, always defaults to fire!
+				default:
+					this.dstats[stat.id] = stat.val; // Just let it error if I forgot a non-val stat
+					break;
+			}
+		}
 	}
 
 	isColorAffected() { // ... By affixes or socketed items
@@ -764,6 +973,8 @@ class Item extends require('./Unit') {
 		for (var i = 0; i < item.stats.length; i++) {
 			this.addStat(item.stats[i]);
 		}
+
+		//item.getFlatStats();
 
 		if (this.color === 21 && !this.fillers && this.isColorAffected() && item.isType('gem')) {
 			let gem = GemRune[GemRuneCodeIndex[item.code]];

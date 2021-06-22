@@ -2,6 +2,7 @@ class Stat {
 	constructor(...args) {
 		this.baseStat = args.shift();
 		this.name = this.baseStat.stat;
+		this.id = this.baseStat.rowindex;
 		this.__proto__.init.apply(this, args);
 	}
 }
@@ -21,8 +22,8 @@ class ElementalSkillsBonusStat extends Stat {
 }
 
 class ClassSkillsBonusStat extends Stat {
-	init(className, val) {
-		this.className = className;
+	init(charClass, val) {
+		this.charClass = charClass;
 		this.val = val;
 	}
 }

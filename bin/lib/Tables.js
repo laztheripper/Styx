@@ -50,6 +50,7 @@ const Runeword		= readTable('Runes.txt');
 const Unique		= readTable('UniqueItems.txt');
 const GemRune    	= readTable('gems.txt');
 const Property 		= readTable('Properties.txt');
+const Skill			= readTable('skills.txt');
 
 const BaseCodeIndex		= {}; // Base code: row index
 const ItemStatIndex		= {}; // Stat: row index
@@ -130,6 +131,7 @@ module.exports.GemRune		= GemRune;
 module.exports.Runeword		= Runeword;
 module.exports.Unique		= Unique;
 module.exports.Property		= Property;
+module.exports.Skill		= Skill;
 
 // Dicts
 module.exports.BaseCodeIndex		= BaseCodeIndex;
