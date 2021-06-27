@@ -7,9 +7,10 @@ const BufferHelper = require('./BufferHelper');
 const { MenuAction, ChatType, ChatColor } = require('./Enums');
 const { logPacket } = require('./Util');
 const Project = require('../../package.json');
+const Manager = require('./Manager');
 
 class Game {
-	constructor(diabloProxy) {
+	constructor(diabloProxy, mcp) {
 		this.diabloProxy = diabloProxy; // extends Events so every packet handled by the hook can be emitted to this.diabloProxy
 		this.gameServer = new GameServer(this);
 		this.gameClient = new GameClient(this);
@@ -23,7 +24,7 @@ class Game {
 		delete this.collect; // Doesnt need to be called again
 	}
 
-	spoofMessage(msg, color, type, nick) {
+	getMessage(msg, color, type, nick) {
 		var i, buff, ind = 0;
 		
 		if (color === undefined) color = ChatColor.White;
@@ -43,7 +44,17 @@ class Game {
 		for (i = 0; i < msg.length; i++) buff.writeUInt8(msg[i].charCodeAt(0), ind++);
 		buff.writeUInt8(0x00, ind++);
 
-		this.diabloProxy.client.write(buff); // Send
+		this.getPacket(buff); // Send
+	}
+
+	getPacket(buffer) {
+		if (!this.gameServer.lastBuff) {
+			this.diabloProxy.client.write(buffer);
+			return true;
+		}
+
+		this.diabloProxy.client.queue.push(buffer); // Don't insert a packet in the middle of a stream!
+		return true;
 	}
 
 	collect() {
@@ -93,7 +104,7 @@ class Game {
 			this.me.charname = BufferHelper.getCString(packetData.raw, 16, 8);
 			this.me.account = BufferHelper.getCString(packetData.raw, 16, 24);
 			//console.log('0x5A', this.me); // Last one received related to `me`
-			this.spoofMessage(Project.name + ' ' + Project.version, ChatColor.BrightWhite, ChatType.Print);
+			this.getMessage(Project.name + ' ' + Project.version, ChatColor.BrightWhite, ChatType.Print);
 		});
 
 		this.gameServer.once(0x01, ({packetData}) => {
@@ -110,14 +121,11 @@ class Game {
 
 		this.gameServer.once(0xB0, _ => {
 			this.destroy();
-			console.log('Game exit');
-			console.log(this.itemCollector.items);
 		});
 	}
 
 	destroy() {
-		// For all items we have, we call the destroy function if need
-		Object.keys(this).filter(key => this[key] && this[key].hasOwnProperty('destroy')).forEach(key => this[key].destroy());
+		Object.keys(this).filter(key => this[key] && this[key].hasOwnProperty('destroy')).forEach(key => this[key].destroy()); // Doesn't work for some reason, but doesn't matter cause somehow there's no memory leaks. Wat
 	}
 }
 

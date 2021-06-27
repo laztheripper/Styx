@@ -23,24 +23,27 @@ class WS {
 
     onclose() {
         if (this.reconnect) {
-            setTimeout(() => this.create(), 5000);
+            setTimeout(() => this.create(), 10000);
             console.log('Socket reconnecting...');
         }
     }
 
     onopen() {
         this.pong = true;
+        this.send('auth', Config.apiKey);
     }
 
     onmessage(msg) {
         this.pong = true;
         try {
+            msg = msg.data;
             msg = JSON.parse(msg);
+            if (msg.abort) this.destroy();
             if (this.handler) this.handler(msg);
         } catch (e) {
             console.log(e);
         }
-        console.log(msg);
+        //console.log(msg);
     }
 
     prepare(action, msg) {
@@ -55,7 +58,7 @@ class WS {
 
     send(action, msg='') {
         try {
-            console.log(action, msg);
+            //console.log(action, msg);
             msg = this.prepare(action, msg);
             if (msg.length > WS.msgLimit) throw new Error('Message length exceeded limit');
             this.socket.send(msg);
@@ -78,10 +81,11 @@ class WS {
         this.send('ping');
     }
 
-    constructor(url=Config.apiUrl, port) {
+    constructor(url=Config.apiUrl, port, handler) {
         if (!url.startsWith('wss://')) url = 'wss://' + url;
         this.url = url + (port ? ':' + port : '');
         this.port = port;
+        if (handler) this.handler = handler;
         this.create();
 		this.interval = setInterval(
 			() => this.ping(),
@@ -106,6 +110,7 @@ class WS {
     static msgLimit = 5000;
     handler = false;
     pong = false;
+    authed = false;
 }
 
-module.exports = WS;
+module.exports.WS = new WS();

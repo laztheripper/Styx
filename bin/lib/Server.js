@@ -3,6 +3,8 @@
  * @author Jaenster
  */
 
+const Manager = require('./Manager');
+const Project = require('../../package.json');
 const net = require('net');
 const Connection = require('./Connection');
 const {users = [], options = {allowNoAuth: false, listen: 0x50C4}} = require('../ServerConfig.js');

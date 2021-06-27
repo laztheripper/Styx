@@ -5,6 +5,7 @@
  * @credits Awesom-O source code helped me allot.
  */
 
+const sha256 = require('js-sha256');
 const BitReader = require('./BitReader');
 const BufferHelper = require('./BufferHelper');
 const {ItemFlags, ItemLocation, EquipmentLocation, ItemActionType, ItemQuality, ItemDestination, ItemAffixType} = require('./Enums');
@@ -981,7 +982,7 @@ class Item extends require('./Unit') {
 			if (gem.transform) this.color = gem.transform;
 		}
 
-		this.fillers.push(item.classid); // Todo think of a way to include gfx id not just basetype (jewels)
+		this.fillers.push(item.classid + ':' + item.gfx); // Todo think of a way to include gfx id not just basetype (jewels)
 	}
 
 	serialize(method='JSON') {
@@ -996,11 +997,17 @@ class Item extends require('./Unit') {
 
 				switch (key) {
 				case 'stats':
-
+					obj.stats = {};
+					if (!this.dstats) break;
+					for (var stat in this.dstats) obj.stats[stat] = this.dstats[stat];
+					break;
+				
+				case 'fillers':
+					obj.fillers = [...this.fillers];
 					break;
 
 				case 'packet':
-					obj.packet = BufferHelper.getByteStr(this.packet);
+					obj.packet = BufferHelper.getByteStr(this.packet).replace(/ /g, '');
 					break;
 				
 				case 'identified':
@@ -1030,6 +1037,9 @@ class Item extends require('./Unit') {
 				}
 			}
 
+			obj.hash = ''; //sha256();
+			obj.uhash = ''; //sha256();
+
 			return JSON.stringify(obj);
 		default:
 			throw new Error('Serialize method unsupoprted \'' + method + '\'');
@@ -1046,6 +1056,7 @@ class Item extends require('./Unit') {
 		'bodylocation', // bodylocation int
 		'x', // x int
 		'y', // y int
+		'gfx', // gfx int
 		'packet', // packet bytestr
 		'stats', // stats JSON
 		'sockets', // sockets int

@@ -13,13 +13,4 @@ const Storage = require('node-persist');
     });
 })();
 
-class Account {
-    constructor(name) {
-        this.name = name;
-    }
-
-    
-}
-
-module.exports.Storage = Storage;
-module.exports.Account = Account;
+module.exports = Storage;

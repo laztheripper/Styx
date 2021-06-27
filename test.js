@@ -1,19 +1,19 @@
 const BufferHelper = require('./bin/lib/BufferHelper');
 const Item = require('./bin/lib/Item');
 const BitReader = require('./bin/lib/BitReader');
-var {BaseCodeIndex} = require('./bin/lib/Tables');
+var {BaseCodeIndex, BaseItem} = require('./bin/lib/Tables');
 
 var items = [
  // '9c 04 2e 05 0f 00 00 00 10 08 c0 00 65 00 04 72 23 46 07 82 f0 e1 0f 28 28 e2 40 8e 08 64 c8 c0 b0 d4 37 8c 7a 41 b1 0d e3 46 7c 23 fe 03',
   //'9c 04 20 10 36 00 00 00 10 00 80 00 64 00 aa aa 56 76 07 82 31 25 63 90 24 02 0a 14 50 dc fe 03',
 
-  '9c 04 24 05 0f 00 00 00 10 00 80 00 65 00 04 92 73 c6 06 82 b1 e1 59 33 18 4a 09 00 79 22 5c ba e4 af ec 3f',
+  //'9c 04 24 05 0f 00 00 00 10 00 80 00 65 00 04 92 73 c6 06 82 b1 e1 59 33 18 4a 09 00 79 22 5c ba e4 af ec 3f',
 
-  /*'9c 04 36 01 61 88 9e 30 10 08 c0 0c 65 00 08 5a 17 26 07 c2 aa 30 04 05 c7 8f 0f f4 1f 02 b2 08 2c 59 9e 78 4a f1 b4 e2 a9 c5 53 9a 96 1c 26 d9 c3 03 05 db f2 1f',
+  '9c 04 36 01 61 88 9e 30 10 08 c0 0c 65 00 08 5a 17 26 07 c2 aa 30 04 05 c7 8f 0f f4 1f 02 b2 08 2c 59 9e 78 4a f1 b4 e2 a9 c5 53 9a 96 1c 26 d9 c3 03 05 db f2 1f',
   '9d 13 19 10 30 24 4f 88 04 61 88 9e 30 18 00 a0 08 65 18 00 20 07 13 03 02',
   '9d 13 19 10 18 92 27 44 04 61 88 9e 30 18 00 a0 08 65 18 02 20 17 23 03 02',
   '9d 13 19 10 0c a9 13 22 04 61 88 9e 30 18 00 a0 08 65 18 04 20 17 43 03 02',
-  '9d 13 19 10 86 b4 09 11 04 61 88 9e 30 18 00 a0 08 65 18 06 20 27 83 03 02',*/
+  '9d 13 19 10 86 b4 09 11 04 61 88 9e 30 18 00 a0 08 65 18 06 20 27 83 03 02',
 
   /*'9c 04 3b 01 4f 00 00 00 11 08 80 04 64 60 08 52 47 07 07 42 ed 90 21 28 8e f1 f0 20 08 0f 96 8c fe 43 40 16 81 25 cb 13 50 29 a0 56 40 b5 80 4a d3 92 c3 24 7b 78 a0 60 83 fe 03',
   '9d 13 19 10 50 00 00 00 04 4f 00 00 00 18 00 a0 00 64 18 00 20 07 13 03 02',
@@ -106,5 +106,9 @@ for (let i = 0; i < items.length; i++) {
 
 base.getDerivedStats();
 
-console.log(base);
+//console.log(base.serialize());
+
+
+
+
 

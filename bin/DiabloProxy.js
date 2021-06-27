@@ -3,6 +3,7 @@
  *
  */
 const Game = require('./lib/Game');
+const MCP = require('./lib/MCP');
 const fs = require('fs');
 const Config = require('./Config');
 
@@ -45,45 +46,58 @@ class DiabloProxy {
 	 * @param port
 	 */
 	constructor(client, server, ip, port) {
-		this.proxyType = 'Diablo';
-		
 		client.on.call(client, 'error', () => client.destroy());
 		server.on.call(server, 'error', () => server.destroy());
+		client.pipe(server);
+		server.pipe(client);
 
-		if (port !== 4000) { // Just combine the 2 and be done with it
-			client.pipe(server);
-			server.pipe(client);
-			return null;
-		}
-
-		const dataHandler = (to, hooks) => buffer => {
+		const dataHandler = (to, hooks, write) => buffer => {
 			try {
 				hooks.map(hook => hook.call(this, buffer)); // For every hook in hooks (of client or server), run the hook
 			} catch(e) {
 				console.log(e); // On running hook handle error
 			} finally {
-				to.write(buffer); // Finally write from source to target
+				if (write) to.write(buffer); // Finally write from source to target
+				while (to.queue.length) to.write(to.queue.shift());
 			}
 		}
-		
-		this.hooks = {client: [], server: []};
 
-		client.pipe(server); // For now
-		//server.pipe(client);
-		//client.on('data', dataHandler(server, this.hooks.client)); // On data from client, pass server and client hooks to datahandler
-		server.on('data', dataHandler(client, this.hooks.server));
-
+		this.hooks = {client: [], server: []}; // Unless someone wants to check out the raw stream, should always be just one hook per
 		this.ip = ip;
 		this.port = port;
 		this.scfile = __dirname + '\\log\\s-c-' + ip + '-' + port + '-' + Date.now() + '.log';
 		this.csfile = __dirname + '\\log\\c-s-' + ip + '-' + port + '-' + Date.now() + '.log';
 		this.client = client;
 		this.server = server;
-		this.initizialed = true;
-		this.game = new Game(this);
+		this.client.queue = [];
+		this.server.queue = [];
+		this.type = false;
+
+		if (port === 4000) {
+			this.type = 'D2GS';
+			client.on('data', dataHandler(server, this.hooks.client));
+			server.on('data', dataHandler(client, this.hooks.server));
+			this.game = new Game(this);
+		} else if (!ip.startsWith('199.')) {
+			this.type = 'MCP';
+			this.client.on('data', dataHandler(this.server, this.hooks.client));
+			this.server.on('data', dataHandler(this.client, this.hooks.server));
+			this.mcp = new MCP(this);
+		} else {
+			this.type = 'Other';
+		}
 
 		DiabloProxy.instances.push(this);
 		client.on('close', () => this.destroy());
+	}
+
+	getMcpInstance() {
+		for (var i = 0; i < DiabloProxy.instances.length; i++) {
+			if (DiabloProxy.instances[i].type !== 'MCP') continue;
+			return DiabloProxy.instances[i];
+		}
+
+		throw new Error('No MCP found for Game instance');
 	}
 
 	destroy() {
