@@ -8,6 +8,7 @@ class RealmClient extends require('events') {
 		this.lastBuff = false;
         this.header = true;
         this.mcp.diabloProxy.hooks.client.push(buffer => {
+
             if (this.lastBuff) {
                 if (this.lastBuff.length > 1260) {
                     logPacket('Malformed packet stream: RealmClient->Server', this.lastBuff);
@@ -20,7 +21,7 @@ class RealmClient extends require('events') {
 
             while (buffer.length) {
                 if (this.header && buffer.length === 1) break; // Skip header
-                const size = buffer[1] + buffer[0];
+                const size = buffer.readUInt16LE(0);
 
                 if (buffer.length - size < 0) {
                     if (buffer.length > 0) { // Packet is truncated, append the truncated part to the next packet that arrives..

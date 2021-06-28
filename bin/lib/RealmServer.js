@@ -18,7 +18,7 @@ class RealmServer extends require('events') {
             }
 
             while (buffer.length) {
-                const size = buffer[1] + buffer[0];
+                const size = buffer.readUInt16LE(0);
 
                 if (buffer.length - size < 0) {
                     if (buffer.length > 0) { // Packet is truncated, append the truncated part to the next packet that arrives..

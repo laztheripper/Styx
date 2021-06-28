@@ -120,7 +120,15 @@ class Game {
 		});
 
 		this.gameClient.once(0x68, ({packetData}) => {
-			console.log(packetData);
+			for (var i = 0; i < this.diabloProxy.constructor.instances.length; i++) {
+				if (this.diabloProxy.constructor.instances[i].type !== 'MCP') continue;
+				if (this.diabloProxy.constructor.instances[i].mcp.gameHash !== packetData.GameHash) continue;
+				this.mcp = this.diabloProxy.constructor.instances[i].mcp;
+				return true;
+			}
+
+			throw new Error('MCP not found for D2GS');
+			return false;
 		});
 
 		this.gameServer.once(0xB0, _ => {

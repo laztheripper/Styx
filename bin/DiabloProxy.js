@@ -91,17 +91,12 @@ class DiabloProxy {
 		client.on('close', () => this.destroy());
 	}
 
-	getMcpInstance() {
-		for (var i = 0; i < DiabloProxy.instances.length; i++) {
-			if (DiabloProxy.instances[i].type !== 'MCP') continue;
-			return DiabloProxy.instances[i];
-		}
-
-		throw new Error('No MCP found for Game instance');
-	}
-
 	destroy() {
-		DiabloProxy.instances.splice(DiabloProxy.instances.indexOf(this), 1);
+		if (this.type === 'MCP' && this.mcp.gameHash) {
+			setTimeout(() => DiabloProxy.instances.splice(DiabloProxy.instances.indexOf(this), 1), 5000); // Delay so the d2gs connection has time to grab the infos
+		} else {
+			DiabloProxy.instances.splice(DiabloProxy.instances.indexOf(this), 1);
+		}
 	}
 
 	static instances = [];

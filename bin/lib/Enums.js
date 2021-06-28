@@ -607,3 +607,16 @@ module.exports.QualityColorCode = [ // Chat colors by item quality
 	'ÿc4', // 7 Unique: unique
 	'ÿc8', // 8 Crafted: orange
 ];
+
+module.exports.McpRealm = { // IP -> Realm for MCP connections
+	'115.116.0.82'		: 'useast',
+	'37.244.2.20'		: 'useast',
+	'37.244.3.46'		: 'uswest',
+	'112.101.0.82'		: 'europe',
+	'37.244.54.171'		: 'europe',
+	'52.87.153.62'		: 'asia',
+	'192.168.16.124'	: 'asia',
+	'54.161.119.129'	: 'asia',
+	'158.115.200.146'	: 'asia',
+	'35.175.132.231'	: 'asia',
+};

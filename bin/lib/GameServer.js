@@ -19,8 +19,6 @@ class GameServer extends require('events') {
 
 			while (buffer.length) {
 				const size = GameServer.getPacketSize(buffer, buffer.length);
-				
-				if (buffer[0] === 0x26) console.log(size, buffer.length, buffer);
 
 				if (size === -1 || buffer.length - size < 0) {
 					if (buffer.length > 0) { // Packet is truncated, append the truncated part to the next packet that arrives..
