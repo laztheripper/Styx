@@ -10,6 +10,7 @@ class MCP {
 
         this.account = {};
         this.account.chars = {};
+        this.gameHash = false;
 
         this.collect();
         delete this.collect;
@@ -20,12 +21,9 @@ class MCP {
             console.log(packetData);
         });
 
-        
         this.realmServer.on(0x04, ({packetData}) => {
-            console.log('MCP S->C 0x04', packetData);
-        });
-        this.realmClient.on(0x04, ({packetData}) => {
-            console.log('MCP C->S 0x04', packetData);
+            this.gameHash = packetData.GameHash;
+            console.log(packetData);
         });
     }
 }

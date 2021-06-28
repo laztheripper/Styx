@@ -19,6 +19,8 @@ class GameServer extends require('events') {
 
 			while (buffer.length) {
 				const size = GameServer.getPacketSize(buffer, buffer.length);
+				
+				if (buffer[0] === 0x26) console.log(size, buffer.length, buffer);
 
 				if (size === -1 || buffer.length - size < 0) {
 					if (buffer.length > 0) { // Packet is truncated, append the truncated part to the next packet that arrives..
@@ -50,22 +52,22 @@ class GameServer extends require('events') {
 	}
 
 	static serverPacketSizes = [
-		1,	// 0x0
-		8,	// 0x1
-		1,	// 0x2
-		12,	// 0x3
-		1,	// 0x4
-		1,	// 0x5
-		1,	// 0x6
-		6,	// 0x7
-		6,	// 0x8
-		11,	// 0x9
-		6,	// 0xA
-		6,	// 0xB
-		9,	// 0xC
-		13,	// 0xD
-		12,	// 0xE
-		16,	// 0xF
+		1,	// 0x00
+		8,	// 0x01
+		1,	// 0x02
+		12,	// 0x03
+		1,	// 0x04
+		1,	// 0x05
+		1,	// 0x06
+		6,	// 0x07
+		6,	// 0x08
+		11,	// 0x09
+		6,	// 0x0A
+		6,	// 0x0B
+		9,	// 0x0C
+		13,	// 0x0D
+		12,	// 0x0E
+		16,	// 0x0F
 		16,	// 0x10
 		8,	// 0x11
 		26,	// 0x12
@@ -239,7 +241,7 @@ class GameServer extends require('events') {
 	 * @param {number} offset
 	 * @returns {number}
 	 */
-	static getPacketSize(bytes, size, offset = 0) {
+	static getPacketSize(bytes, size, offset=0) {
 		const packetId = bytes[0];
 
 		switch (packetId) {

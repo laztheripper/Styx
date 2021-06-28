@@ -57,6 +57,7 @@ const BYTE = 'byte', WORD = 'word', DWORD = 'dword', NULLSTRING = 'string';
 
 let structs = [
 	{id: 0x00,}, // Keepalive
+    {id: 0x04, RequestId: WORD, GameToken: WORD, Unknown: WORD, GameIp: DWORD, GameHash: DWORD, Result: DWORD,}, // MCP_Joingame
 	//{id: 0x19, RequestChars: WORD, TotalChars: DWORD, Chars: WORD, *}, // MCP_Charlist2
 ];
 

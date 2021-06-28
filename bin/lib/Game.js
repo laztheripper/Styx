@@ -119,6 +119,10 @@ class Game {
 			this.me.ladder		= this.ladder;
 		});
 
+		this.gameClient.once(0x68, ({packetData}) => {
+			console.log(packetData);
+		});
+
 		this.gameServer.once(0xB0, _ => {
 			this.destroy();
 		});
