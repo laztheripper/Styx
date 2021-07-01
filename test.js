@@ -106,6 +106,15 @@ for (let i = 0; i < items.length; i++) {
 
 base.getDerivedStats();
 
+var buffer = Buffer.from('15 00 02 03 00 00 00 60 00 68 61 6d 6d 65 72 73 6c 6f 6f 74 00'.replace(/ /g, ''), 'hex');
+var size = 21;
+
+const packetBuffer = Buffer.alloc(size - 2);
+buffer.copy(packetBuffer, 0, 2, size);
+buffer = buffer.slice(size, buffer.length);
+
+console.log(packetBuffer);
+
 //console.log(base.serialize());
 
 

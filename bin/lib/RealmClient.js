@@ -8,7 +8,6 @@ class RealmClient extends require('events') {
 		this.lastBuff = false;
         this.header = true;
         this.mcp.diabloProxy.hooks.client.push(buffer => {
-
             if (this.lastBuff) {
                 if (this.lastBuff.length > 1260) {
                     logPacket('Malformed packet stream: RealmClient->Server', this.lastBuff);
@@ -20,7 +19,7 @@ class RealmClient extends require('events') {
             }
 
             while (buffer.length) {
-                if (this.header && buffer.length === 1) break; // Skip header
+                if (this.header && buffer[0] === 0x01) break; // Skip header
                 const size = buffer.readUInt16LE(0);
 
                 if (buffer.length - size < 0) {
@@ -34,7 +33,7 @@ class RealmClient extends require('events') {
                 }
 
                 const packetBuffer = Buffer.alloc(size - 2);
-                buffer.copy(packetBuffer, 0, 2, size - 2);
+                buffer.copy(packetBuffer, 0, 2, size);
                 buffer = buffer.slice(size, buffer.length);
 
                 let packetData;
@@ -61,7 +60,21 @@ module.exports = RealmClient;
 const BYTE = 'byte', WORD = 'word', DWORD = 'dword', NULLSTRING = 'string';
 
 let structs = [
-	//{id: 0x19, *}, // MCP_Charlist2
+    //{id: 0x01, MCPCookie: DWORD, MCPStatus: DWORD, MCPChunk1[8]: BYTE, MCPChunk2[48]: BYTE, BnetName: NULLSTRING,}, // MCP_STARTUP
+    {id: 0x02, Class: DWORD, Flags: WORD, CharName: NULLSTRING,}, // MCP_CHARCREATE
+    //{id: 0x03, RequestId: WORD, GameFlags: DWORD, Unknown1: BYTE, Difference: BYTE, MaxPlayers: BYTE, Name: NULLSTRING, Password: NULLSTRING, Description: NULLSTRING,}, // MCP_CREATEGAME
+    //{id: 0x04, RequestId: WORD, GameName: NULLSTRING, GamePass: NULLSTRING,}, // MCP_JOINGAME
+    //{id: 0x05, RequestId: WORD, HardcoreFlag: DWORD, SearchString: NULLSTRING,}, // MCP_GAMELIST
+    //{id: 0x06, RequestId: WORD, GameName: NULLSTRING,}, // MCP_GAMEINFO
+    //{id: 0x07, CharName: NULLSTRING,}, // MCP_CHARLOGON
+    //{id: 0x0A, RequestId: WORD, CharName: NULLSTRING,}, // MCP_CHARDELETE
+    //{id: 0x11, LadderType: BYTE, StartPosition: WORD,}, // MCP_REQUESTLADDERDATA
+    //{id: 0x12,}, // MCP_MOTD
+    //{id: 0x13,}, // MCP_CANCELGAMECREATE
+    //{id: 0x16, Hardcore: DWORD, Expansion: DWORD, CharName: NULLSTRING,}, // MCP_CHARRANK
+    //{id: 0x17, Quantity: DWORD,}, // MCP_CHARLIST
+    //{id: 0x18, CharName: NULLSTRING,}, // MCP_CHARUPGRADE
+    //{id: 0x19, RequestCount: DWORD,}, // MCP_CHARLIST2
 ];
 
 structs.forEach(({id, ...rest}) => {

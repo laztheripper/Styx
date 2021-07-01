@@ -1,5 +1,6 @@
 const RealmClient = require('./RealmClient');
 const RealmServer = require('./RealmServer');
+const BufferHelper = require('./BufferHelper');
 const { McpRealm } = require('./Enums');
 
 class MCP {
@@ -13,6 +14,7 @@ class MCP {
         this.account.chars = {};
         this.gameHash = false;
         this.realm = MCP.getRealmIp(this.diabloProxy.ip);
+        this.createChar = false;
 
         this.collect();
         delete this.collect;
@@ -35,13 +37,27 @@ class MCP {
     collect() {
         this.realmServer.on(0x19, ({packetData}) => { // Charscreen data
             this.account.chars = MCP.parseCharList(packetData.raw);
+            //console.log(this.account.chars);
         });
 
         this.realmServer.on(0x02, ({packetData}) => {
-            var buff = Buffer.alloc(2);
-            buff.writeUInt8(0x19, 0); // PacketId
-            buff.writeUInt8(0x12, 1); // 18 chars
-            this.sendPacket(buff);
+            if (!packetData.Result && this.createChar) // 0x00 = success. +we have the data
+                this.account.chars[this.createChar.name] = this.createChar;
+            this.createChar = false;
+        });
+
+        this.realmClient.on(0x02, ({packetData}) => {
+            this.createChar = {
+                classid: packetData.Class,
+                name: BufferHelper.getCString(packetData.raw, 16, 7),
+                level: 1,
+                ladder: (packetData.Flags & 0x40) !== 0,
+                dead: (packetData.Flags & 0x08) !== 0,
+                hardcore: (packetData.Flags & 0x04) !== 0,
+                expansion: (packetData.Flags & 0x20) !== 0,
+                diff: 0,
+                expire: 24 * 11, 
+            };
         });
 
         this.realmServer.on(0x04, ({packetData}) => {
@@ -59,7 +75,8 @@ class MCP {
         for (i = 0; i < charnum; i++) {
             char = {};
 
-            char.expire = Math.round(((bytes.readUInt32LE(offset) - (Date.now() / 1000)) / (60 * 60 * 24)) * 100) / 100; // Days.00 until expiration
+            //char.expire = Math.round(((bytes.readUInt32LE(offset) - (Date.now() / 1000)) / (60 * 60 * 24)) * 100) / 100; // Days.xx until expiration
+            char.expire = Math.round((bytes.readUInt32LE(offset) - (Date.now() / 1000)) / (60 * 60)); // Hours until expiration
             offset += 4;
             char.name = '';
             while (bytes[offset++]) char.name += String.fromCharCode(bytes[offset-1]);

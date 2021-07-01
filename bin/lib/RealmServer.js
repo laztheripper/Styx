@@ -31,7 +31,7 @@ class RealmServer extends require('events') {
                 }
 
                 const packetBuffer = Buffer.alloc(size - 2);
-                buffer.copy(packetBuffer, 0, 2, size - 2);
+                buffer.copy(packetBuffer, 0, 2, size);
                 buffer = buffer.slice(size, buffer.length);
 
                 let packetData;
@@ -57,6 +57,7 @@ const BYTE = 'byte', WORD = 'word', DWORD = 'dword', NULLSTRING = 'string';
 
 let structs = [
 	{id: 0x00,}, // Keepalive
+    {id: 0x02, Result: DWORD,}, // MCP_CharCreate
     {id: 0x04, RequestId: WORD, GameToken: WORD, Unknown: WORD, GameIp: DWORD, GameHash: DWORD, Result: DWORD,}, // MCP_Joingame
 	//{id: 0x19, RequestChars: WORD, TotalChars: DWORD, Chars: WORD, *}, // MCP_Charlist2
 ];

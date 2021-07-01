@@ -5,6 +5,7 @@
 const Game = require('./lib/Game');
 const MCP = require('./lib/MCP');
 const fs = require('fs');
+const { McpRealm } = require('./lib/Enums');
 const Config = require('./Config');
 
 /** @param {string} dirPath
@@ -78,7 +79,7 @@ class DiabloProxy {
 			client.on('data', dataHandler(server, this.hooks.client));
 			server.on('data', dataHandler(client, this.hooks.server));
 			this.game = new Game(this);
-		} else if (!ip.startsWith('199.')) {
+		} else if (McpRealm.hasOwnProperty(ip)) {
 			this.type = 'MCP';
 			this.client.on('data', dataHandler(this.server, this.hooks.client));
 			this.server.on('data', dataHandler(this.client, this.hooks.server));
