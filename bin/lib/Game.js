@@ -1,5 +1,6 @@
 const GameServer = require('./GameServer');
 const GameClient = require('./GameClient');
+const Account = require('./Account');
 const UnitCollector = require('./UnitCollector');
 const ItemCollector = require('./ItemCollector');
 const Unit = require('./Unit');
@@ -10,7 +11,7 @@ const Project = require('../../package.json');
 const Manager = require('./Manager');
 
 class Game {
-	constructor(diabloProxy, mcp) {
+	constructor(diabloProxy) {
 		this.diabloProxy = diabloProxy; // extends Events so every packet handled by the hook can be emitted to this.diabloProxy
 		this.gameServer = new GameServer(this);
 		this.gameClient = new GameClient(this);
@@ -29,7 +30,7 @@ class Game {
 		
 		if (color === undefined) color = ChatColor.White;
 		if (type === undefined) type = ChatType.Print;
-		if (nick === undefined) nick = this.me.charname || 'Styx';
+		if (nick === undefined) nick = this.me.name || 'Styx';
 
 		buff = Buffer.alloc(10 + nick.length + 1 + msg.length + 1);
 		buff.writeUInt8(0x26, ind++); // Chat msg
@@ -95,13 +96,12 @@ class Game {
 			this.me.x = packetData.X;
 			this.me.y = packetData.Y;
 			this.me.classid = packetData.CharType;
-			this.me.isMe = true;
 			this.me.type = 0;
 			this.unitCollector.collection[0][this.me.uid] = this.me;
 		});
 
 		this.gameServer.once(0x5A, ({packetData}) => {
-			this.me.charname = BufferHelper.getCString(packetData.raw, 16, 8);
+			this.me.name = BufferHelper.getCString(packetData.raw, 16, 8);
 			this.me.account = BufferHelper.getCString(packetData.raw, 16, 24);
 			//console.log('0x5A', this.me); // Last one received related to `me`
 			this.getMessage(Project.name + ' ' + Project.version, ChatColor.BrightWhite, ChatType.Print);
@@ -132,13 +132,25 @@ class Game {
 		});
 
 		this.gameServer.once(0xB0, _ => {
-			this.destroy();
+			this.saveAndExit()
+			.then(() => Manager.update(this))
+			.catch(error => console.log(error))
+			.finally(() => this.destroy());
 		});
 	}
 
-	destroy() {
-		Object.keys(this).filter(key => this[key] && this[key].hasOwnProperty('destroy')).forEach(key => this[key].destroy()); // Doesn't work for some reason, but doesn't matter cause somehow there's no memory leaks. Wat
+	async saveAndExit() {
+		if (!this.mcp) throw new Error('No MCP');
+		if (!this.mcp.account.chars.hasOwnProperty(this.me.name) &&
+			!Account.list[this.mcp.realm].hasOwnProperty(this.me.account)
+		) throw new Error('No charlist data found!');
 	}
+
+	destroy() {
+		Object.keys(this).filter(key => this[key] && this[key].hasOwnProperty('destroy')).forEach(key => this[key].destroy());
+	}
+
+	finalized = false;
 }
 
 module.exports = Game;

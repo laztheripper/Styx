@@ -4,6 +4,7 @@ class ItemCollector {
 	constructor(game) {
 		this.game = game;
 		this.items = {};
+		this.rows = {};
 		this.collect();
 		delete this.collect;
 	}
@@ -42,6 +43,7 @@ class ItemCollector {
 				this.game.me.items[item.uid] = item;
 				break;
 			case 1:
+				item.location = 666; // Merc
 				this.game.merc.items[item.uid] = item;
 				break;
 			case 4:
@@ -64,6 +66,24 @@ class ItemCollector {
 	clearOwner(owner) { // remove all items of unit and ofc socketed items
 		for (let uid in owner.items) {
 			this.remove(uid);
+		}
+	}
+
+	finalize() {
+		var id, item, sockId;
+
+		for (id in this.items) {
+			item = this.items[id];
+			
+			if (item.ownerType === 4) {
+				delete this.items[id];
+				continue;
+			}
+
+			for (sockId in item.items) item.socketWith(item.items[sockId]);
+			item.getDerivedStats();
+			item.getRowData(this.game);
+			this.rows[item.row.uhash] = item.row;
 		}
 	}
 

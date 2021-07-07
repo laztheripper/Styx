@@ -36,7 +36,7 @@ class MCP {
 
     collect() {
         this.realmServer.on(0x19, ({packetData}) => { // Charscreen data
-            this.account.chars = MCP.parseCharList(packetData.raw);
+            this.account.chars = this.parseCharList(packetData.raw);
             //console.log(this.account.chars);
         });
 
@@ -52,11 +52,13 @@ class MCP {
                 name: BufferHelper.getCString(packetData.raw, 16, 7),
                 level: 1,
                 ladder: (packetData.Flags & 0x40) !== 0,
-                dead: (packetData.Flags & 0x08) !== 0,
+                //dead: (packetData.Flags & 0x08) !== 0,
                 hardcore: (packetData.Flags & 0x04) !== 0,
                 expansion: (packetData.Flags & 0x20) !== 0,
                 diff: 0,
-                expire: 24 * 11, 
+                expire: 24 * 11,
+                realm: this.realm,
+                items: [],
             };
         });
 
@@ -65,7 +67,7 @@ class MCP {
         });
     }
 
-    static parseCharList(bytes) {
+    parseCharList(bytes) {
         var i, flags, char, charnum, offset = 7,
             chars = {};
 
@@ -79,13 +81,15 @@ class MCP {
             char.expire = Math.round((bytes.readUInt32LE(offset) - (Date.now() / 1000)) / (60 * 60)); // Hours until expiration
             offset += 4;
             char.name = '';
+            char.items = [];
+            char.realm = this.realm;
             while (bytes[offset++]) char.name += String.fromCharCode(bytes[offset-1]);
 
             flags           = bytes[offset+26];
             char.level      = bytes[offset+25];
             char.classid    = bytes[offset+13] - 1;
             char.ladder     = bytes[offset+30] !== 0xFF;
-            char.dead       = (flags & 0x08) !== 0;
+            //char.dead     = (flags & 0x08) !== 0;
             char.hardcore   = (flags & 0x04) !== 0;
             char.expansion  = (flags & 0x20) !== 0;
             char.diff       = ((bytes[offset+27] & 0x3E) >> 1) / (char.expansion ? 5 : 4);

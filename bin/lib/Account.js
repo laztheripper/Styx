@@ -2,11 +2,14 @@ class Account {
     constructor(name, realm) {
         this.name = name;
         this.realm = realm;
+        this.chars = {}; // Charname: {}, etc.
+        this.charCount = 0;
         Account.list[this.realm][this.name] = this;
         Account.count += 1;
     }
 
     addChar(char) {
+        char.account = this.name;
         this.chars[char.name] = char;
         this.charCount += 1;
     }
@@ -31,7 +34,7 @@ class Account {
         delete Account.list[this.realm][this.name];
         Account.count -= 1;
     }
-
+    
     static destroyAll(children=true) {
         for (var realm in Account.list) {
             for (var acc in Account.list[realm]) {
@@ -40,17 +43,20 @@ class Account {
         }
     }
 
-    chars = {}; // Charname: {}, etc.
-    charCount = 0;
-    
+    static exists(name, realm) {
+        if (Account.list[realm].hasOwnProperty(name)) return true;
+        return false;
+    }
+
     static count = 0;
+    
     static list = {
-        'east'      : {},
-        'west'      : {},
-        'europe'    : {},
-        'asia'      : {},
-        'remaster'  : {},
+        '1' : {}, // East
+        '0' : {}, // West
+        '3' : {}, // Euro
+        '2' : {}, // Asia
+        '4' : {}, // Remaster
     };
 }
 
-module.exports.Account = Account;
+module.exports = Account;

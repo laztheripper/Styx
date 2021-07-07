@@ -18,7 +18,7 @@ class WS {
     }
 
     onerror(e) {
-        console.log(e);
+        console.log(e.message);
     }
 
     onclose() {
@@ -43,7 +43,7 @@ class WS {
         } catch (e) {
             console.log(e);
         }
-        //console.log(msg);
+        console.log(msg);
     }
 
     prepare(action, msg) {
@@ -113,4 +113,4 @@ class WS {
     authed = false;
 }
 
-module.exports.WS = new WS();
+module.exports = new WS();

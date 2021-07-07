@@ -105,6 +105,7 @@ class Item extends require('./Unit') {
 		this.stats			= [];
 		this.fillers		= [];
 		this.gfx 			= 0; // Gfx id for charms, jewels, amulets, etc
+		this.color			= 21;
 		this.items			= {};
 		this.UnitId			= this.uid; // Just a shorthand
 		this.UnitType		= this.type; // Just a shorthand
@@ -985,69 +986,103 @@ class Item extends require('./Unit') {
 		this.fillers.push(item.classid + ':' + item.gfx); // Todo think of a way to include gfx id not just basetype (jewels)
 	}
 
-	serialize(method='JSON') {
-		var i, key, obj;
-		
-		switch (method) {
-		case 'JSON':
-			obj = {};
+	getRowData(game) {
+		var n, i, key, obj = {},
+			temp = {};
 
-			for (i = 0; i < Item.serializeKeys.length; i++) {
-				key = Item.serializeKeys[i];
+		for (i = 0; i < Item.columns.length; i++) {
+			key = Item.columns[i];
 
-				switch (key) {
-				case 'stats':
-					obj.stats = {};
-					if (!this.dstats) break;
-					for (var stat in this.dstats) obj.stats[stat] = this.dstats[stat];
-					break;
-				
-				case 'fillers':
-					obj.fillers = [...this.fillers];
-					break;
+			switch (key) {
+			case 'hash':
+			case 'uhash':
+				break;
 
-				case 'packet':
-					obj.packet = BufferHelper.getByteStr(this.packet).replace(/ /g, '');
-					break;
-				
-				case 'identified':
-					obj.identified = this.flags.Identified;
-					break;
-
-				case 'ethereal':
-					obj.ethereal = this.flags.Ethereal;
-					break;
-				
-				case 'prefix':
-				case 'suffix':
-					if (!this.hasOwnProperty(key)) {
-						obj[key] = -1;
-						break;
-					}
-					obj[key] = this[key].index;
-					break;
-
-				default:
-					if (!this.hasOwnProperty(key)) {
-						obj[key] = 0;
-						break;
-					}
-					if (typeof this[key] === 'object') throw new Error('Cannot serialize nested objects');
-					obj[key] = this[key];
+			case 'stats':
+				obj.stats = {};
+				if (!this.dstats) break;
+				let keys = Object.keys(this.dstats).sort();
+				for (n = 0; n < keys.length; n++) {
+					obj.stats[keys[n]] = this.dstats[keys[n]];
+					if (keys[n].endsWith('_charges') || keys[n] === 'dura') continue;
+					temp[keys[n]] = this.dstats[keys[n]];
 				}
+				break;
+			
+			case 'fillers':
+				obj.fillers = [...this.fillers];
+				break;
+
+			case 'packet':
+				obj.packet = BufferHelper.getByteStr(this.packet).replace(/ /g, '');
+				break;
+			
+			case 'identified':
+				obj.identified = this.flags.Identified;
+				break;
+
+			case 'ethereal':
+				obj.ethereal = this.flags.Ethereal;
+				break;
+			
+			case 'uniqueid':
+			case 'runewordid':
+			case 'setid':
+				if (!this.hasOwnProperty(key)) {
+					obj[key] = -1;
+					break;
+				}
+				obj[key] = this[key];
+				break;
+
+			case 'prefix':
+			case 'suffix':
+				if (!this.hasOwnProperty(key)) {
+					obj[key] = -1;
+					break;
+				}
+				obj[key] = this[key].index;
+				break;
+
+			default:
+				if (!this.hasOwnProperty(key)) {
+					obj[key] = 0;
+					break;
+				}
+				if (typeof this[key] === 'object') throw new Error('Cannot serialize nested objects');
+				obj[key] = this[key];
 			}
-
-			obj.hash = ''; //sha256();
-			obj.uhash = ''; //sha256();
-
-			return JSON.stringify(obj);
-		default:
-			throw new Error('Serialize method unsupoprted \'' + method + '\'');
 		}
-		return false;
+
+		obj.hash = sha256(JSON.stringify({
+			classid		: obj.classid,
+			ethereal	: obj.ethereal,
+			gfx			: obj.gfx,
+			quality 	: obj.quality,
+			sockets 	: obj.sockets,
+			stats 		: temp,
+		}));
+
+		obj.uhash = sha256(JSON.stringify({
+			charName	: game.me.name,
+			realm		: game.mcp.realm,
+			classid		: obj.classid,
+			ethereal	: obj.ethereal,
+			gfx			: obj.gfx,
+			quality 	: obj.quality,
+			sockets 	: obj.sockets,
+			stats 		: obj.stats,
+			location 	: obj.location,
+			bodylocation: obj.bodylocation,
+			x 			: obj.x,
+			y 			: obj.y,
+		}));
+
+		this.row = obj;
+		return obj;
 	}
 
-	static serializeKeys = [
+	static columns = [
 		'uhash', // uhash str (specific to the item, two items with the same uhash are literally the same item in the same location, dura, etc...)
 		'hash', // hash str (an equivalent item would have the same hash. same stat but maybe not same char or position etc...)
 		'classid', // classid int
@@ -1073,7 +1108,7 @@ class Item extends require('./Unit') {
 		'setid', // setid int
 		'runewordid', // runewordid int
 		'iflags', // iflags int
-	];
+	].sort();
 }
 
 module.exports = Item;
