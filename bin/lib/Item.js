@@ -101,6 +101,7 @@ class Item extends require('./Unit') {
 		this.category		= p.byte;
 		this.uid			= p.dword;
 
+		this.fake			= fake;
 		this.type 			= 4; // Unit type (always item...)
 		this.stats			= [];
 		this.fillers		= [];
@@ -341,7 +342,7 @@ class Item extends require('./Unit') {
 				}
 			}
 		}
-
+		
 		this.color = this.getColor();
 
 		if (this.flags.Runeword) {
@@ -761,7 +762,7 @@ class Item extends require('./Unit') {
 			let maxOneHandDamage = this.baseItem.maxdam 		? Math.floor((Math.floor(this.baseItem.maxdam 		  * (this.flags.Ethereal ? 1.5 : 1)) * maxDamagePercent) / 100) + maxDamageBonus : 0;
 			let maxTwoHandDamage = this.baseItem['2handmaxdam'] ? Math.floor((Math.floor(this.baseItem['2handmaxdam'] * (this.flags.Ethereal ? 1.5 : 1)) * maxDamagePercent) / 100) + maxDamageBonus : 0;
 			let maxThrowDamage	 = this.baseItem.maxmisdam		? Math.floor((Math.floor(this.baseItem.maxmisdam	  * (this.flags.Ethereal ? 1.5 : 1)) * maxDamagePercent) / 100) + maxDamageBonus : 0;
-			
+
 			if (minOneHandDamage && minOneHandDamage >= maxOneHandDamage) maxOneHandDamage = minOneHandDamage + 1;
 			if (minTwoHandDamage && minTwoHandDamage >= maxTwoHandDamage) maxTwoHandDamage = minTwoHandDamage + 1;
 			if (minThrowDamage	 && minThrowDamage   >= maxThrowDamage)   maxThrowDamage   = minThrowDamage	  + 1;
@@ -913,21 +914,19 @@ class Item extends require('./Unit') {
 		}
 	}
 
-	isColorAffected() { // ... By affixes or socketed items
+	isColorAffected() { // ... By socketed items
 		if (this.quality === ItemQuality.Set)		return false;
 		if (this.quality === ItemQuality.Unique)	return false;
 		if (this.quality === ItemQuality.Crafted)	return false;
 		if (this.flags.Runeword)					return false;
-		if (this.hasType('misc'))					return false; // Rings, amulets, runes, jewels, pots, etc..
 		return true;
 	}
 
 	getColor() {
-		if (!this.flags.Identified) return 21;
+		if (!this.flags.Identified) return this.quality === ItemQuality.Set ? 13 : 21;
 		if (this.quest) return 21;
-		if (this.quality === ItemQuality.Set && SetItem[this.setid].invtransform) return ColorCodeIndex[SetItem[this.setid].invtransform];		
-		if (this.quality === ItemQuality.Unique && Unique[this.uniqueid].invtransform) return ColorCodeIndex[Unique[this.uniqueid].invtransform];
-		if (!this.isColorAffected()) return 21; // 21 is "regular" aka no color, this is just so it works with ItemScreenshot lib, could be -1 instead
+		if (this.quality === ItemQuality.Set) return SetItem[this.setid].invtransform ? ColorCodeIndex[SetItem[this.setid].invtransform] : 21;		
+		if (this.quality === ItemQuality.Unique) return Unique[this.uniqueid].invtransform ? ColorCodeIndex[Unique[this.uniqueid].invtransform] : 21;
 		if (this.magicSuffixes) {
 			for (let i = 0; i < this.magicSuffixes.length; i++) {
 				let transColorCode = MagicSuffix[this.magicSuffixes[i].index].transformcolor;
@@ -942,7 +941,7 @@ class Item extends require('./Unit') {
 		}
 		if (this.autoMod) {
 			let transColorCode = AutoAffix[this.autoMod].transformcolor;
-			return ColorCodeIndex[transColorCode];
+			if (transColorCode) return ColorCodeIndex[transColorCode];
 		}
 		return 21;
 	}
@@ -1075,8 +1074,8 @@ class Item extends require('./Unit') {
 		}));
 
 		obj.uhash = sha256(JSON.stringify({
-			charName	: game.me.name,
-			realm		: game.mcp.realm,
+			charName	: this.fake ? '' : game.me.name,
+			realm		: this.fake ? '' : game.mcp.realm,
 			classid		: obj.classid,
 			ethereal	: obj.ethereal,
 			gfx			: obj.gfx,
