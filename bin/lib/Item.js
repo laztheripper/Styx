@@ -435,14 +435,24 @@ class Item extends require('./Unit') {
 				case ItemStatIndex.firemindam:
 				case ItemStatIndex.lightmindam:
 				case ItemStatIndex.magicmindam:
-					return this.addStat(new DamageRangeStat(baseStat, min, max));
-	
+					return this.addStat(new DamageRangeStat(baseStat, min, 0));
+				case ItemStatIndex.firemaxdam: // Packet will only contain min, reading from gems table gives us min and max without these.
+				case ItemStatIndex.lightmaxdam:
+				case ItemStatIndex.magicmaxdam:
+					return this.addStat(new DamageRangeStat(ItemStat[statID-1], 0, max));
+
 				case ItemStatIndex.coldmindam:
-					return this.addStat(new ColdDamageStat(baseStat, min, max, param));
+					return this.addStat(new ColdDamageStat(baseStat, min, 0, param));
+				case ItemStatIndex.coldmaxdam:
+					return this.addStat(new ColdDamageStat(ItemStat[statID-1], 0, max, param));
 	
 				case ItemStatIndex.poisonmindam:
-					return this.addStat(new PoisonDamageStat(baseStat, min, max, param));
-		
+					return this.addStat(new PoisonDamageStat(baseStat, min, 0, param));
+				case ItemStatIndex.poisonmaxdam:
+					return this.addStat(new PoisonDamageStat(ItemStat[statID-1], 0, max, param));
+				case ItemStatIndex.poisonlength:
+					return this.addStat(new PoisonDamageStat(ItemStat[statID-2], 0, 0, param));
+
 				case ItemStatIndex.itemreplenishdurability:
 				case ItemStatIndex.itemreplenishquantity:
 					return this.addStat(new ReplenishStat(baseStat, param));
@@ -450,13 +460,7 @@ class Item extends require('./Unit') {
 				case ItemStatIndex.quantity:
 					return this.addStat(new SignedStat(baseStat, max)); // For any varying prop, put max (as opposed to min)
 	
-				case ItemStatIndex.firemaxdam: // Packet will only contain min, reading from gems table gives us min and max without these.
-				case ItemStatIndex.lightmaxdam:
-				case ItemStatIndex.magicmaxdam:
-				case ItemStatIndex.coldmaxdam:
-				case ItemStatIndex.poisonmaxdam:
 				case ItemStatIndex.coldlength:
-				case ItemStatIndex.poisonlength:
 					return;
 
 				default:
@@ -559,11 +563,13 @@ class Item extends require('./Unit') {
 				default:
 					if (baseStat.signed) {
 						let val = p.bits(baseStat.savebits);
-						if (baseStat.saveadd > 0) val -= baseStat.saveadd;
+						//if (baseStat.saveadd > 0) val -= baseStat.saveadd;
+						val -= baseStat.saveadd;
 						return this.addStat(new SignedStat(baseStat, val));
 					} else {
 						let val = p.bits(baseStat.savebits);
-						if (baseStat.saveadd > 0) val -= baseStat.saveadd;
+						//if (baseStat.saveadd > 0) val -= baseStat.saveadd;
+						val -= baseStat.saveadd;
 						return this.addStat(new UnsignedStat(baseStat, val));
 					}
 			}
@@ -851,11 +857,16 @@ class Item extends require('./Unit') {
 				case ItemStatIndex.firemindam:
 				case ItemStatIndex.coldmindam:
 				case ItemStatIndex.lightmindam:
-				case ItemStatIndex.poisonmindam:
 				case ItemStatIndex.magicmindam:
 					this.dstats[stat.id] = stat.min;
 					this.dstats[stat.id+1] = stat.max;
 					break;
+
+				case ItemStatIndex.poisonmindam:
+					this.dstats[stat.id] = stat.min;
+					this.dstats[stat.id+1] = stat.max;
+					this.dstats[stat.id+2] = stat.frames;
+					break; 
 				
 				case ItemStatIndex.itemskillonattack:
 				case ItemStatIndex.itemskillondeath:
@@ -870,7 +881,7 @@ class Item extends require('./Unit') {
 				case ItemStatIndex.itemchargedskill:
 					this.dstats[stat.id + '_' + stat.skill + '_level'] = stat.level;
 					this.dstats[stat.id + '_' + stat.skill + '_charges'] = stat.charges;
-					this.dstats[stat.id + '_' + stat.skill + '_maxcharges'] = stat.maxcharges;
+					this.dstats[stat.id + '_' + stat.skill + '_maxcharges'] = stat.maxCharges;
 					break;
 				
 				case ItemStatIndex.itemaura:
@@ -968,7 +979,7 @@ class Item extends require('./Unit') {
 	}
 
 	socketWith(item) {
-		if (item.isType('gem') || item.isType('rune')) {
+		if (item.hasType('gem') || item.isType('rune')) {
 			this.getGemStats(item);
 		}
 
@@ -978,12 +989,12 @@ class Item extends require('./Unit') {
 
 		//item.getFlatStats();
 
-		if (this.color === 21 && !this.fillers && this.isColorAffected() && item.isType('gem')) {
+		if (this.color === 21 && !this.fillers && this.isColorAffected() && item.hasType('gem')) {
 			let gem = GemRune[GemRuneCodeIndex[item.code]];
 			if (gem.transform) this.color = gem.transform;
 		}
 
-		this.fillers.push(item.classid + ':' + item.gfx); // Todo think of a way to include gfx id not just basetype (jewels)
+		//this.fillers.push(item.classid + ':' + item.gfx);
 	}
 
 	getRowData(game) {
@@ -1010,7 +1021,7 @@ class Item extends require('./Unit') {
 				break;
 			
 			case 'fillers':
-				obj.fillers = [...this.fillers];
+				obj.fillers = this.fillers.join(',');
 				break;
 
 			case 'packet':

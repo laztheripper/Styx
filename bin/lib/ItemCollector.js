@@ -48,6 +48,7 @@ class ItemCollector {
 				break;
 			case 4:
 				this.items[item.ownerUID].items[item.uid] = item;
+				this.items[item.ownerUID].fillers.push(item.classid + ':' + item.gfx);
 				item.parent = item.ownerUID;
 				break;
 		}
@@ -74,12 +75,7 @@ class ItemCollector {
 
 		for (id in this.items) {
 			item = this.items[id];
-			
-			if (item.ownerType === 4) {
-				delete this.items[id];
-				continue;
-			}
-
+			if (item.ownerType === 4) continue;
 			for (sockId in item.items) item.socketWith(item.items[sockId]);
 			item.getDerivedStats();
 			item.getRowData(this.game);

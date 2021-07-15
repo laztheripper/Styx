@@ -60,7 +60,7 @@ class WS {
         try {
             //console.log(action, msg);
             msg = this.prepare(action, msg);
-            if (msg.length > WS.msgLimit) throw new Error('Message length exceeded limit');
+            //if (msg.length > WS.msgLimit) throw new Error('Message length exceeded limit');
             this.socket.send(msg);
         } catch (e) {
             console.log(e);

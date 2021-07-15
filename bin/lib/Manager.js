@@ -87,6 +87,7 @@ class Manager {
         changes[game.me.name].items = Object.values(myChar.items);
 
         this.charUpdate(changes);
+        //console.log(changes[game.me.name].items, JSON.stringify(changes[game.me.name].items).length);
         console.log(changes, JSON.stringify(changes).length);
     }
 }

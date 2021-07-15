@@ -5,7 +5,7 @@ const UnitCollector = require('./UnitCollector');
 const ItemCollector = require('./ItemCollector');
 const Unit = require('./Unit');
 const BufferHelper = require('./BufferHelper');
-const { MenuAction, ChatType, ChatColor } = require('./Enums');
+const { MenuAction, ChatType, ChatColor, SoundCmd } = require('./Enums');
 const { logPacket } = require('./Util');
 const Project = require('../../package.json');
 const Manager = require('./Manager');
@@ -46,6 +46,19 @@ class Game {
 		buff.writeUInt8(0x00, ind++);
 
 		this.getPacket(buff); // Send
+	}
+
+	playSound(sound, target) {
+		if (target === undefined) target = this.me;
+		if (sound === undefined) throw new Error('Missing sound id for playSound()');
+
+		var buff = Buffer.alloc(1 + 1 + 4 + 2); // Id, Type, Gid, SoundIdx
+		buff.writeUInt8(0x2C, 0);
+		buff.writeUInt8(target.type, 1);
+		buff.writeUInt32LE(target.uid, 2);
+		buff.writeUInt16LE(sound, 6);
+
+		this.getPacket(buff);
 	}
 
 	getPacket(buffer) {
