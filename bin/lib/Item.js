@@ -175,8 +175,8 @@ class Item extends require('./Unit') {
 					this.location = ItemLocation.Item;
 				} else {
 					this.location = ItemLocation.Belt;
-					this.y = this.x / 4;
-					this.x = this.x % 4;
+					this.y = Math.floor(this.x / 4);	// Row index from the bottom
+					this.x = this.x % 4;				// Column index from the left
 				}
 			} else {
 				this.x = -1;
@@ -319,6 +319,7 @@ class Item extends require('./Unit') {
 
 				case ItemQuality.Unique:
 					if (this.code !== 'std') this.uniqueid = p.bits(12);
+					else p.bits(12);
 					break;
 			}
 		} else {
@@ -524,6 +525,11 @@ class Item extends require('./Unit') {
 
 		if (statID === 0x1FF || statID >= ItemStatIndex.length) {
 			//br.pos -= 9;
+
+			//const left = br.data.length - (br.pos + 1);
+			//console.log('remain:', left);
+			//if (left) p.bits(left);
+
 			return false;
 		}
 
@@ -811,7 +817,7 @@ class Item extends require('./Unit') {
 					reqs.push(SetItem[this.setid].lvlreq || 0);
 					break;
 				case ItemQuality.Unique:
-					reqs.push(Unique[this.uniqueid].lvlreq || 0);
+					reqs.push(Unique[this.uniqueid]?.lvlreq || 0);
 					break;
 			}
 
@@ -923,9 +929,10 @@ class Item extends require('./Unit') {
 	}
 
 	getColor() {
-		if (!this.flags.Identified) return this.quality === ItemQuality.Set ? 13 : 21;
-		if (this.quest) return 21;
-		if (this.quality === ItemQuality.Set) return SetItem[this.setid].invtransform ? ColorCodeIndex[SetItem[this.setid].invtransform] : 21;		
+		if (!this.flags.Identified)              return this.quality === ItemQuality.Set ? 13 : 21;
+		if (this.quest)                          return 21;
+		if (this.classid === 658)                return 21;
+		if (this.quality === ItemQuality.Set)    return SetItem[this.setid].invtransform ? ColorCodeIndex[SetItem[this.setid].invtransform] : 21;		
 		if (this.quality === ItemQuality.Unique) return Unique[this.uniqueid].invtransform ? ColorCodeIndex[Unique[this.uniqueid].invtransform] : 21;
 		if (this.magicSuffixes) {
 			for (let i = 0; i < this.magicSuffixes.length; i++) {

@@ -1,23 +1,4 @@
 module.exports.ItemLocation = {
-	/*Unspecified: 0,
-	Inventory: 2,
-	TraderOffer: 4,
-	ForTrade: 6,
-	Cube: 8,
-	Stash: 0x0A,
-	// Not a buffer... flagged with 0x20 if (action == PutInBelt || RemoveFromBelt)
-	Belt: 0x20,
-	// Not a buffer... if (buffer == Equipement && destination == Item)
-	Item: 0x40,
-	//NPC buffers are flagged with 0x80 so they are different
-	ArmorTab: 0x82,
-	WeaponTab1: 0x84,
-	WeaponTab2: 0x86,
-	MiscTab: 0x88,
-	//ArmorTabBottom  :0x83, // Buffer merged with ArmorTab
-	//WeaponTab1Bottom:0x85, // Buffer merged with WeaponTab1
-	//MiscTabBottom   :0x89, // Buffer merged with WeaponTab2*/
-
 	Disappeared: -1,
 	Equipment: 0x00,
 	Inventory: 0x01,
@@ -25,9 +6,12 @@ module.exports.ItemLocation = {
 	ForTrade: 0x03,
 	Cube: 0x04,
 	Stash: 0x05,
-	Ground: 0x06,
-	Belt: 0x07,
-	Item: 0x08,
+	Shared1: 0x06,
+	Shared2: 0x07,
+	Shared3: 0x08,
+	Ground: 0x09,
+	Belt: 0x0A,
+	Item: 0x0B,
 	ArmorTab: 0x101,
 	WeaponTab1: 0x102,
 	WeaponTab2: 0x103,
@@ -35,11 +19,11 @@ module.exports.ItemLocation = {
 };
 
 module.exports.ItemFlags = {
-	None: 0,
-	Equipped: 1,
-	Bought: 2,
-	Cursor: 4,
-	InSocket: 8, // Applies to runes and jewels but not gems
+	None: 0x00,
+	Equipped: 0x01,
+	Bought: 0x02,
+	Cursor: 0x04,
+	InSocket: 0x08, // Applies to runes and jewels but not gems
 	Identified: 0x10,
 	Destroyed: 0x20,
 	SwitchedIn: 0x40,
@@ -133,9 +117,9 @@ module.exports.ItemQuality = {
 };
 
 module.exports.ItemDestination = {
-	Container: 0,
-	Equipment: 4,
-	Belt: 8,
+	Container: 0x00,
+	Equipment: 0x04,
+	Belt: 0x08,
 	Ground: 0x0C,
 	Cursor: 0x10,
 	Item: 0x18,
@@ -255,6 +239,8 @@ module.exports.McpRealm = { // IP -> Realm for MCP connections
 	'54.161.119.129'	: 2, // Asia
 	'158.115.200.146'	: 2, // Asia
 	'35.175.132.231'	: 2, // Asia
+
+	'remasterip...'		: 4, // Remaster
 };
 
 module.exports.SoundCmd = { // S->C 0x2C

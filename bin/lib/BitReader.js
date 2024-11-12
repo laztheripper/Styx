@@ -106,15 +106,52 @@ class BitReader {
 	}
 
 	static shortHandBr = (br) => ({
-		bit: {get: () => br.bit()},
-		bits: {get: () => bits => br.bit(bits)},
-		byte: {get: () => br.bit(8)}, // 8
-		word: {get: () => br.readUInt16LE()}, // 16
-		dword: {get: () => br.readUInt32LE()}, // 32
-		string: {get: () => (...args) => br.readString.apply(br, args)},
+		bit    : {get: () => br.bit()},
+		bits   : {get: () => bits => br.bit(bits)},
+		byte   : {get: () => br.bit(8)}, // 8
+		word   : {get: () => br.readUInt16LE()}, // 16
+		dword  : {get: () => br.readUInt32LE()}, // 32
+		string : {get: () => (...args) => br.readString.apply(br, args)},
 		boolean: {get: () => !!br.bit()},
 	});
 
+	/*static shortHandBr = (br) => ({
+		bit: {get: () => {
+			const v = br.bit();
+			console.log(`${1}: ${v}`);
+			return v;
+		}},
+		bits: {get: () => bits => {
+			const v = br.bit(bits);
+			console.log(`${bits}: ${v}`);
+			return v;
+		}},
+		byte: {get: () => {
+			const v = br.bit(8);
+			console.log(`byte: ${v}`);
+			return v;
+		}}, // 8
+		word: {get: () => {
+			const v = br.readUInt16LE();
+			console.log(`word: ${v}`);
+			return v;
+		}}, // 16
+		dword: {get: () => {
+			const v = br.readUInt32LE();
+			console.log(`dword: ${v}`);
+			return v;
+		}}, // 32
+		string: {get: () => (...args) => {
+			const v = br.readString.apply(br, args);
+			console.log(`str: ${v}`);
+			return v;
+		}},
+		boolean: {get: () => {
+			const v = !!br.bit();
+			console.log(`bool: ${v}`);
+			return v;
+		}},
+	});*/
 }
 
 module.exports = BitReader;

@@ -12,6 +12,7 @@ class Character extends require('events') {
         this.classid    = info.classid;
         this.diff       = info.diff;
         this.items      = info.items || [];
+        this.shared     = false;
         Character.list[this.realm][this.name] = this;
         Character.count += 1;
         this.emit('charupdate', this);

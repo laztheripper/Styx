@@ -32,6 +32,17 @@ class Manager {
         WS.send('chars', chars);
     }
 
+    async inGame(game) {
+        await WS.send('active', {
+            account: game.me.account,
+            character: game.me.name,
+        });
+    }
+
+    async outGame(game) {
+        await WS.send('inactive');
+    }
+
     async update(game) {
         var acc, charInfo, char, realm, accName, charName, charList;
         realm = game.mcp.realm;

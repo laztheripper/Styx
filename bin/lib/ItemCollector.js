@@ -5,6 +5,7 @@ class ItemCollector {
 		this.game = game;
 		this.items = {};
 		this.rows = {};
+		this.sharedrows = {};
 		this.collect();
 		delete this.collect;
 	}
@@ -79,13 +80,15 @@ class ItemCollector {
 			for (sockId in item.items) item.socketWith(item.items[sockId]);
 			item.getDerivedStats();
 			item.getRowData(this.game);
-			this.rows[item.row.uhash] = item.row;
+			if (item.location === 69) this.sharedrows[item.row.uhash] = item.row;
+			else this.rows[item.row.uhash] = item.row;
 		}
 	}
 
 	destroy() {
 		this.items = {};
 		this.me.items = {};
+		this.share.items = {};
 		this.merc.items = {};
 		this.game = null;
 	}
